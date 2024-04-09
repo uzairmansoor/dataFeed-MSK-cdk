@@ -3,7 +3,7 @@ from aws_cdk import (
     Duration,
     Stack,
     CfnOutput,
-    path as path,
+    # path as path,
     aws_ec2 as ec2,
     aws_iam as iam,
     aws_sns_subscriptions as subs,
@@ -15,11 +15,12 @@ from aws_cdk import (
     # aws_msk_alpha as msk_alpha,
     aws_secretsmanager as secretsmanager,
     aws_kms as kms,
-    aws_cloudwatch as cloudwatch
-    # aws_s3_assets as Asset
-    aws_kinesisanalytics_flink_alpha as flink
+    aws_logs as logs,
+    tags as tags
+    # aws_kinesisanalytics_flink_alpha as flink
 )
 from . import parameters
+import aws_cdk.aws_kinesisanalytics_flink_alpha as flink
 import json
 
 class dataFeedMskAwsBlogStack(Stack):
@@ -51,6 +52,7 @@ class dataFeedMskAwsBlogStack(Stack):
                 },
             ]
         )
+        tags.of(node).add("Environment", "Dev")
 
         sgEc2MskCluster = ec2.SecurityGroup(self, "sgEc2MskCluster",
             security_group_name = f"{parameters.project}-{parameters.env}-{parameters.app}-sgEc2MskCluster",
@@ -102,87 +104,100 @@ class dataFeedMskAwsBlogStack(Stack):
         bucket = s3.Bucket.from_bucket_name(self, "MyBucket", parameters.bucket_name)
         
         ec2MskClusterRole = iam.Role(self, "ec2MskClusterRole",
-        role_name = f"{parameters.project}-{parameters.env}-{parameters.app}-ec2MskClusterRole",
-        assumed_by=iam.ServicePrincipal("ec2.amazonaws.com")
+            role_name = f"{parameters.project}-{parameters.env}-{parameters.app}-ec2MskClusterRole",
+            assumed_by=iam.ServicePrincipal("ec2.amazonaws.com")
         )
         
-        ec2MskClusterRole.add_to_policy(iam.PolicyStatement(
-            actions=[
-                "kafka:ListClusters",
-                "kafka:DescribeCluster"
-            ],
-            resources= ["*"] #["arn:aws:kafka:*:*:cluster/*"]
-        ))
-
-        ec2MskClusterRole.add_to_policy(iam.PolicyStatement(
-            actions=[
-                "ec2:DescribeInstances",
-                "ec2:DescribeInstanceAttribute",
-                "ec2:ModifyInstanceAttribute",
-                "ec2:DescribeSecurityGroups",
-                "ec2:DescribeSubnets",
-                "ec2:DescribeTags",
-                "kafka-cluster:Connect",
-                "kafka-cluster:AlterCluster",
-                "kafka-cluster:DescribeCluster",
-                "kafka-cluster:DescribeClusterDynamicConfiguration",
-                "kafka-cluster:CreateTopic",
-                "kafka-cluster:DeleteTopic",
-                "kafka-cluster:WriteData",
-                "kafka-cluster:ReadData",
-                "kafka-cluster:AlterGroup",
-                "kafka-cluster:DescribeGroup",
-                "kafka:GetBootstrapBrokers"
-            ],
-            resources= ["*"] #["arn:aws:kafka:*:*:cluster/*"]
-        ))
-
-        ec2MskClusterRole.add_to_policy(iam.PolicyStatement(
-            actions=[
-                "s3:*",
-                "s3-object-lambda:*"
-            ],
-            resources= ["*"] #["arn:aws:kafka:*:*:cluster/*"]
-        ))
-
-        lambdaFunctionExecutionRole = iam.Role(self, "lambdaExecutionRole",
-        role_name = f"{parameters.project}-{parameters.env}-{parameters.app}-lambdaFunctionExecutionRole",
-        assumed_by=iam.ServicePrincipal("lambda.amazonaws.com")
+        ec2MskClusterRole.attach_inline_policy(
+            iam.Policy(self, 'ec2MskClusterPolicy',
+                statements = [
+                    iam.PolicyStatement(
+                        effect = iam.Effect.ALLOW,
+                        actions=[
+                            "kafka:ListClusters",
+                            "kafka:DescribeCluster"
+                        ],
+                        resources= ["*"] #["arn:aws:kafka:*:*:cluster/*"]
+                    ),
+                    iam.PolicyStatement(
+                        effect = iam.Effect.ALLOW,
+                        actions=[
+                            "ec2:DescribeInstances",
+                            "ec2:DescribeInstanceAttribute",
+                            "ec2:ModifyInstanceAttribute",
+                            "ec2:DescribeSecurityGroups",
+                            "ec2:DescribeSubnets",
+                            "ec2:DescribeTags",
+                            "kafka-cluster:Connect",
+                            "kafka-cluster:AlterCluster",
+                            "kafka-cluster:DescribeCluster",
+                            "kafka-cluster:DescribeClusterDynamicConfiguration",
+                            "kafka-cluster:CreateTopic",
+                            "kafka-cluster:DeleteTopic",
+                            "kafka-cluster:WriteData",
+                            "kafka-cluster:ReadData",
+                            "kafka-cluster:AlterGroup",
+                            "kafka-cluster:DescribeGroup",
+                            "kafka:GetBootstrapBrokers"
+                        ],
+                        resources= ["*"] #["arn:aws:kafka:*:*:cluster/*"]
+                    ),
+                    iam.PolicyStatement(
+                        effect = iam.Effect.ALLOW,
+                        actions=[
+                            "s3:*",
+                            "s3-object-lambda:*"
+                        ],
+                        resources= ["*"] #["arn:aws:kafka:*:*:cluster/*"]
+                    ),
+                ]
+            )
         )
 
-# Attach the policy to the IAM role
-        lambdaFunctionExecutionRole.add_to_policy(iam.PolicyStatement(
-            actions=[
-                "kafka:DescribeCluster",
-                "kafka:DescribeClusterV2",
-                "kafka:GetBootstrapBrokers",
-                "ec2:CreateNetworkInterface",
-                "ec2:DescribeNetworkInterfaces",
-                "ec2:DescribeVpcs",
-                "ec2:DeleteNetworkInterface",
-                "ec2:DescribeSubnets",
-                "ec2:DescribeSecurityGroups",
-                "logs:CreateLogGroup",
-                "logs:CreateLogStream",
-                "logs:PutLogEvents"
-            ],
-            resources= ["*"] #["arn:aws:kafka:*:*:cluster/*"]
-        ))
+        lambdaFunctionExecutionRole = iam.Role(self, "lambdaExecutionRole",
+            role_name = f"{parameters.project}-{parameters.env}-{parameters.app}-lambdaFunctionExecutionRole",
+            assumed_by=iam.ServicePrincipal("lambda.amazonaws.com")
+        )
 
-        lambdaFunctionExecutionRole.add_to_policy(iam.PolicyStatement(
-            actions=[
-                "logs:CreateLogGroup",
-                "logs:CreateLogStream",
-                "logs:PutLogEvents",
-                "ec2:CreateNetworkInterface",
-                "ec2:DescribeNetworkInterfaces",
-                "ec2:DescribeSubnets",
-                "ec2:DeleteNetworkInterface",
-                "ec2:AssignPrivateIpAddresses",
-                "ec2:UnassignPrivateIpAddresses"
-            ],
-            resources= ["*"] #["arn:aws:kafka:*:*:topic/*/*"]
-        ))
+        lambdaFunctionExecutionRole.attach_inline_policy(
+            iam.Policy(self, 'lambdaFunctionExecutionPolicy',
+                statements = [
+                    iam.PolicyStatement(
+                        effect = iam.Effect.ALLOW,
+                        actions=[
+                            "kafka:DescribeCluster",
+                            "kafka:DescribeClusterV2",
+                            "kafka:GetBootstrapBrokers",
+                            "ec2:CreateNetworkInterface",
+                            "ec2:DescribeNetworkInterfaces",
+                            "ec2:DescribeVpcs",
+                            "ec2:DeleteNetworkInterface",
+                            "ec2:DescribeSubnets",
+                            "ec2:DescribeSecurityGroups",
+                            "logs:CreateLogGroup",
+                            "logs:CreateLogStream",
+                            "logs:PutLogEvents"
+                        ],
+                        resources= ["*"] #["arn:aws:kafka:*:*:cluster/*"]
+                    ),
+                    iam.PolicyStatement(
+                        effect = iam.Effect.ALLOW,
+                        actions=[
+                            "logs:CreateLogGroup",
+                            "logs:CreateLogStream",
+                            "logs:PutLogEvents",
+                            "ec2:CreateNetworkInterface",
+                            "ec2:DescribeNetworkInterfaces",
+                            "ec2:DescribeSubnets",
+                            "ec2:DeleteNetworkInterface",
+                            "ec2:AssignPrivateIpAddresses",
+                            "ec2:UnassignPrivateIpAddresses"
+                        ],
+                        resources= ["*"] #["arn:aws:kafka:*:*:topic/*/*"]
+                    )
+                ]
+            )
+        )
 
         _lambda.Function(self, "lambdaFunction",
             function_name = f"{parameters.project}-{parameters.env}-{parameters.app}-lambdaFunction",
@@ -265,16 +280,16 @@ class dataFeedMskAwsBlogStack(Stack):
             secret_arn_list = [secretManager.secret_arn]
         )
         
-        key_pair = ec2.KeyPair.from_key_pair_name(self, "MyKeyPair", parameters.keyPairName)
+        keyPair = ec2.KeyPair.from_key_pair_name(self, "MyKeyPair", parameters.keyPairName)
 
         kafkaClientEC2Instance = ec2.Instance(self, "kafkaClientEC2Instance",
             instance_name = f"{parameters.project}-{parameters.env}-{parameters.app}-kafkaClientEC2Instance",
-            vpc=vpc,
-            instance_type=ec2.InstanceType.of(ec2.InstanceClass(parameters.instanceClass), ec2.InstanceSize(parameters.instanceSize)),
-            machine_image= ec2.AmazonLinuxImage(generation=ec2.AmazonLinuxGeneration.AMAZON_LINUX_2), #ec2.MachineImage().lookup(name = parameters.amiName),
+            vpc = vpc,
+            instance_type = ec2.InstanceType.of(ec2.InstanceClass(parameters.instanceClass), ec2.InstanceSize(parameters.instanceSize)),
+            machine_image = ec2.AmazonLinuxImage(generation=ec2.AmazonLinuxGeneration.AMAZON_LINUX_2), #ec2.MachineImage().lookup(name = parameters.amiName),
             availability_zone = vpc.availability_zones[1],
-            vpc_subnets=ec2.SubnetSelection(subnet_type=ec2.SubnetType.PUBLIC),
-            key_pair = key_pair,
+            vpc_subnets = ec2.SubnetSelection(subnet_type=ec2.SubnetType.PUBLIC),
+            key_pair = keyPair,
             security_group = sgEc2MskCluster,
             user_data = ec2.UserData.for_linux(),
             role = ec2MskClusterRole
@@ -318,14 +333,56 @@ class dataFeedMskAwsBlogStack(Stack):
             # f"/kafka_2.13-3.5.1/bin/kafka-topics.sh --bootstrap-server {kafka_url} --command-config /home/ec2-user/client_sasl.properties --create --topic {parameters.topic_name}"
         )
 
-        flink_app = flink.Application(stack, "flinkApp",
-            code = flink.ApplicationCode.from_asset(path.join(__dirname, "code-asset")),
-            runtime = flink.Runtime.FLINK_1_18,
-            application_name = f"{parameters.project}-{parameters.env}-{parameters.app}-flinkApp",
-            auto_scaling_enabled = True,
-            parallelism = 1,
-            parallelism_per_kpu = 1,
-            checkpointing_enabled = True
+        flinkAppLogGroup = logs.LogGroup(self, "apacheFlinkAppLogGroup",
+                log_group_name = f"{parameters.project}-{parameters.env}-{parameters.app}-flinkAppLogGroup",
+                retention = logs.RetentionDays.ONE_WEEK #parameters.flinkAppLogGroupRetentionDays
+        )
+
+        apacheFlinkAppRole = iam.Role(self, "apacheFlinkAppRole",
+            role_name = f"{parameters.project}-{parameters.env}-{parameters.app}-apacheFlinkAppRole",
+            assumed_by=iam.ServicePrincipal("kinesisanalytics.amazonaws.com")
+        )
+
+        apacheFlinkAppRole.attach_inline_policy(
+            iam.Policy(self, 'apacheFlinkAppPolicy',
+                statements = [
+                    iam.PolicyStatement(
+                        effect = iam.Effect.ALLOW,
+                        actions = [
+                            "s3:GetObject",
+                            "s3:GetObjectVersion"
+                        ],
+                        resources = [f"{bucket.bucket_arn}/{parameters.apacheFlinkBucketKey}"]
+                    ),
+                    iam.PolicyStatement(
+                        effect = iam.Effect.ALLOW,
+                        actions = [
+                            "logs:DescribeLogGroups"
+                        ],
+                        resources = [flinkAppLogGroup.log_group_arn]
+                    )
+                ]
+            )
+        )
+
+        apacheFlinkApp = flink.Application(self, "apacheFlinkApp",
+            code = flink.ApplicationCode.from_bucket(bucket = bucket,file_key = parameters.apacheFlinkBucketKey),
+            runtime = flink.Runtime.FLINK_1_11, #(parameters.flinkRuntimeVersion),
+            application_name = f"{parameters.project}-{parameters.env}-{parameters.app}-apacheFlinkApp",
+            vpc = vpc,
+            vpc_subnets = ec2.SubnetSelection(subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS),
+            auto_scaling_enabled = parameters.apacheFlinkAutoScalingEnable,
+            property_groups = {
+                "FlinkApplicationProperties": {
+                    "kinesis.region" : parameters.apacheFlinkKinesisRegion, 
+                    "kinesis.sink.stream" : parameters.apacheFlinkKinesisSinkStream,
+                    "kinesis.source.stream": parameters.apacheFlinkKinesisSourceStream
+                }
+            },
+            parallelism = parameters.apacheFlinkParallelism,
+            parallelism_per_kpu = parameters.apacheFlinkParallelismPerKpu,
+            checkpointing_enabled = parameters.apacheFlinkCheckpointingEnabled,
+            log_group = flinkAppLogGroup
         )
 
         CfnOutput(self, "vpcId",
@@ -352,4 +409,23 @@ class dataFeedMskAwsBlogStack(Stack):
         #     value = mskCluster.attr_bootstrap_brokers_sasl_scram,
         #     description = "Bootstrap Brokers with SASL SCRAM authentication"
         # )
-
+        CfnOutput(self, "flinkAppLogGroupArn",
+            value = flinkAppLogGroup.log_group_arn,
+            description = "Arn of an Apache Flink log group",
+            export_name = f"{parameters.project}-{parameters.env}-{parameters.app}-flinkAppLogGroupArn"
+        )
+        CfnOutput(self, "flinkAppLogGroupName",
+            value = flinkAppLogGroup.log_group_name,
+            description = "Name of an Apache Flink log group",
+            export_name = f"{parameters.project}-{parameters.env}-{parameters.app}-flinkAppLogGroupName"
+        )
+        CfnOutput(self, "apacheFlinkAppArn",
+            value = apacheFlinkApp.application_arn,
+            description = "Arn of an Apache Flink application",
+            export_name = f"{parameters.project}-{parameters.env}-{parameters.app}-apacheFlinkAppArn"
+        )
+        CfnOutput(self, "apacheFlinkAppName",
+            value = apacheFlinkApp.application_name,
+            description = "Name of an Apache Flink application",
+            export_name = f"{parameters.project}-{parameters.env}-{parameters.app}-apacheFlinkAppName"
+        )

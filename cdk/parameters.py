@@ -36,3 +36,16 @@ accountId = "007756798683"
 region = "us-east-1"
 keyPairType = "RSA"
 keyPairFormat = "PEM"
+
+# Flink
+
+apacheFlinkBucketKey = "kinesis-connectors-1.0.jar"
+# flinkRuntimeVersion = FLINK_1_11
+apacheFlinkAutoScalingEnable = True
+apacheFlinkKinesisRegion = "us-east-1"
+apacheFlinkKinesisSinkStream = "output-stream"
+apacheFlinkKinesisSourceStream = "input-stream"
+# flinkAppLogGroupRetentionDays = ONE_WEEK
+apacheFlinkParallelism = 1
+apacheFlinkParallelismPerKpu = 1
+apacheFlinkCheckpointingEnabled = True
