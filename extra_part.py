@@ -41,3 +41,24 @@
         #     env=f"{parameters.env}",
         #     app=f"{parameters.app}"
         # )
+
+# mskAlphaCluster = msk_alpha.Cluster(
+        #     self, "mskAlphaCluster",
+        #     cluster_name = f"{parameters.project}-{parameters.env}-{parameters.app}-mskAlphaCluster",
+        #     kafka_version = parameters.mskVersion,
+        #     number_of_broker_nodes = parameters.mskNumberOfBrokerNodes,
+        #     instance_type = parameters.mskClusterInstanceType,
+        #     vpc_subnets = vpc.select_subnets(subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS).subnet_ids[:2],
+        #     security_groups = [sgMskCluster.security_group_id],
+        #     ebs_storage_info = msk_alpha.Cluster.EbsStorageInfo(
+        #         # encryption_key = key,
+        #         volume_size = parameters.mskClusterVolumeSize
+        #     ),
+        #     client_authentication = msk_alpha.ClientAuthentication.sasl(
+        #         scram = parameters.mskScramPropertyEnable
+        #     ),
+        #     encryption_in_transit = msk.EncryptionInTransitConfig(
+        #         client_broker = msk.ClientBrokerEncryption(parameters.mskEncryptionClientBroker),
+        #         enable_in_cluster = parameters.mskEncryptionInClusterEnable
+        #     )
+        # )

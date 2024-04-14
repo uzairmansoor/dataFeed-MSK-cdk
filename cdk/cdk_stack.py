@@ -14,6 +14,7 @@ from aws_cdk import (
     aws_msk as msk,
     # aws_msk_alpha as msk_alpha,
     aws_secretsmanager as secretsmanager,
+    aws_opensearchservice as opensearch,
     aws_kms as kms,
     aws_logs as logs,
     tags as tags
@@ -52,7 +53,7 @@ class dataFeedMskAwsBlogStack(Stack):
                 },
             ]
         )
-        tags.of(node).add("Environment", "Dev")
+        # tags.of(node).add("Environment", "Dev")
 
         sgEc2MskCluster = ec2.SecurityGroup(self, "sgEc2MskCluster",
             security_group_name = f"{parameters.project}-{parameters.env}-{parameters.app}-sgEc2MskCluster",
@@ -224,61 +225,40 @@ class dataFeedMskAwsBlogStack(Stack):
             encryption_key=customerManagedKey
         )
         
-        mskCluster = msk.CfnCluster(
-            self, "mskCluster",
-            cluster_name = f"{parameters.project}-{parameters.env}-{parameters.app}-mskCluster",
-            kafka_version = parameters.mskVersion,
-            number_of_broker_nodes = parameters.mskNumberOfBrokerNodes,
-            broker_node_group_info = msk.CfnCluster.BrokerNodeGroupInfoProperty(
-                instance_type = parameters.mskClusterInstanceType,
-                client_subnets = vpc.select_subnets(subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS).subnet_ids[:2],
-                security_groups = [sgMskCluster.security_group_id],
-                storage_info = msk.CfnCluster.StorageInfoProperty(
-                    ebs_storage_info = msk.CfnCluster.EBSStorageInfoProperty(
-                        volume_size = parameters.mskClusterVolumeSize
-                    )
-                )
-            ),
-            client_authentication = msk.CfnCluster.ClientAuthenticationProperty(
-                sasl = msk.CfnCluster.SaslProperty(
-                    scram = msk.CfnCluster.ScramProperty(
-                        enabled = parameters.mskScramPropertyEnable
-                    )
-                )
-            ),
-            encryption_info = msk.CfnCluster.EncryptionInfoProperty(
-                encryption_in_transit = msk.CfnCluster.EncryptionInTransitProperty(
-                    client_broker = parameters.mskEncryptionClientBroker,
-                    in_cluster = parameters.mskEncryptionInClusterEnable
-                )
-            )
-        )
-
-        # mskAlphaCluster = msk_alpha.Cluster(
-        #     self, "mskAlphaCluster",
-        #     cluster_name = f"{parameters.project}-{parameters.env}-{parameters.app}-mskAlphaCluster",
+        # mskCluster = msk.CfnCluster(
+        #     self, "mskCluster",
+        #     cluster_name = f"{parameters.project}-{parameters.env}-{parameters.app}-mskCluster",
         #     kafka_version = parameters.mskVersion,
         #     number_of_broker_nodes = parameters.mskNumberOfBrokerNodes,
-        #     instance_type = parameters.mskClusterInstanceType,
-        #     vpc_subnets = vpc.select_subnets(subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS).subnet_ids[:2],
-        #     security_groups = [sgMskCluster.security_group_id],
-        #     ebs_storage_info = msk_alpha.Cluster.EbsStorageInfo(
-        #         # encryption_key = key,
-        #         volume_size = parameters.mskClusterVolumeSize
+        #     broker_node_group_info = msk.CfnCluster.BrokerNodeGroupInfoProperty(
+        #         instance_type = parameters.mskClusterInstanceType,
+        #         client_subnets = vpc.select_subnets(subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS).subnet_ids[:2],
+        #         security_groups = [sgMskCluster.security_group_id],
+        #         storage_info = msk.CfnCluster.StorageInfoProperty(
+        #             ebs_storage_info = msk.CfnCluster.EBSStorageInfoProperty(
+        #                 volume_size = parameters.mskClusterVolumeSize
+        #             )
+        #         )
         #     ),
-        #     client_authentication = msk_alpha.ClientAuthentication.sasl(
-        #         scram = parameters.mskScramPropertyEnable
+        #     client_authentication = msk.CfnCluster.ClientAuthenticationProperty(
+        #         sasl = msk.CfnCluster.SaslProperty(
+        #             scram = msk.CfnCluster.ScramProperty(
+        #                 enabled = parameters.mskScramPropertyEnable
+        #             )
+        #         )
         #     ),
-        #     encryption_in_transit = msk.EncryptionInTransitConfig(
-        #         client_broker = msk.ClientBrokerEncryption(parameters.mskEncryptionClientBroker),
-        #         enable_in_cluster = parameters.mskEncryptionInClusterEnable
+        #     encryption_info = msk.CfnCluster.EncryptionInfoProperty(
+        #         encryption_in_transit = msk.CfnCluster.EncryptionInTransitProperty(
+        #             client_broker = parameters.mskEncryptionClientBroker,
+        #             in_cluster = parameters.mskEncryptionInClusterEnable
+        #         )
         #     )
         # )
 
-        batchScramSecret = msk.CfnBatchScramSecret(self, "batchScramSecret",
-            cluster_arn = mskCluster.attr_arn,
-            secret_arn_list = [secretManager.secret_arn]
-        )
+        # batchScramSecret = msk.CfnBatchScramSecret(self, "batchScramSecret",
+        #     cluster_arn = mskCluster.attr_arn,
+        #     secret_arn_list = [secretManager.secret_arn]
+        # )
         
         keyPair = ec2.KeyPair.from_key_pair_name(self, "MyKeyPair", parameters.keyPairName)
 
@@ -288,6 +268,10 @@ class dataFeedMskAwsBlogStack(Stack):
             instance_type = ec2.InstanceType.of(ec2.InstanceClass(parameters.instanceClass), ec2.InstanceSize(parameters.instanceSize)),
             machine_image = ec2.AmazonLinuxImage(generation=ec2.AmazonLinuxGeneration.AMAZON_LINUX_2), #ec2.MachineImage().lookup(name = parameters.amiName),
             availability_zone = vpc.availability_zones[1],
+            blockDevices = ec2.BlockDevice(
+                device_name="deviceName",
+                volume=ec2.BlockDeviceVolume.ebs(8)
+            ),
             vpc_subnets = ec2.SubnetSelection(subnet_type=ec2.SubnetType.PUBLIC),
             key_pair = keyPair,
             security_group = sgEc2MskCluster,
@@ -383,6 +367,58 @@ class dataFeedMskAwsBlogStack(Stack):
             parallelism_per_kpu = parameters.apacheFlinkParallelismPerKpu,
             checkpointing_enabled = parameters.apacheFlinkCheckpointingEnabled,
             log_group = flinkAppLogGroup
+        )
+        
+        opensearch_access_policy = iam.PolicyStatement(
+            effect=iam.Effect.ALLOW,
+            principals=[iam.AnyPrincipal()],
+            actions=["es:ESHttp*"],
+            resources=[]
+        )
+        
+        openSearchSecretManager = secretsmanager.Secret(self, "openSearchSecrets",
+            description = "Secrets for OpenSearch",
+            secret_name = f"{parameters.project}-{parameters.env}-{parameters.app}-openSearchSecrets",
+            generate_secret_string = secretsmanager.SecretStringGenerator(
+                secret_string_template = json.dumps({"username": parameters.username}),
+                generate_string_key = "password"
+            ),
+            encryption_key=customerManagedKey
+        )
+
+        secret_value = openSearchSecretManager.secret_value.to_json()
+        secret_json = json.loads(secret_value)
+        openSearchMasterUsername = secret_json["username"]
+        openSearchMasterPassword = secret_json["password"]
+        
+        OPENSEARCH_VERSION = parameters.openSearchVersion
+        aos_domain = opensearch.Domain(self, "openSearchDomain",
+            version = opensearch.EngineVersion.open_search(
+                OPENSEARCH_VERSION),
+            capacity = opensearch.CapacityConfig(
+                master_nodes = parameters.no_of_master_nodes,
+                master_node_instance_type = parameters.master_node_instance_type,
+                data_nodes = parameters.no_of_data_nodes,
+                data_node_instance_type = parameters.data_node_instance_type
+            ),
+            ebs = opensearch.EbsOptions(
+                volume_size = parameters.openSearchVolumeSize,
+                volume_type = ec2.EbsDeviceVolumeType.GP3
+            ),
+            access_policies = [opensearch_access_policy],
+            enforce_https = parameters.openSearchEnableHttps,                      # Required when FGAC is enabled
+            node_to_node_encryption = parameters.openSearchNodeToNodeEncryption,   # Required when FGAC is enabled
+            encryption_at_rest = opensearch.EncryptionAtRestOptions(
+                enabled = parameters.openSearchEncryptionAtRest
+            ),
+            fine_grained_access_control = opensearch.AdvancedSecurityOptions(
+                master_user_name = openSearchMasterUsername,
+                master_user_password = openSearchMasterPassword
+            ),
+            zone_awareness = opensearch.ZoneAwarenessConfig(
+                availability_zone_count = parameters.openSearchAvailabilityZoneCount,
+                enabled = parameters.openSearchAvailabilityZoneEnable
+            )
         )
 
         CfnOutput(self, "vpcId",
