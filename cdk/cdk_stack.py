@@ -16,7 +16,8 @@ from aws_cdk import (
     aws_secretsmanager as secretsmanager,
     aws_kms as kms,
     aws_logs as logs,
-    tags as tags
+    # tags as tags,
+    aws_opensearchservice as opensearch
     # aws_kinesisanalytics_flink_alpha as flink
 )
 from . import parameters
@@ -52,7 +53,7 @@ class dataFeedMskAwsBlogStack(Stack):
                 },
             ]
         )
-        tags.of(node).add("Environment", "Dev")
+        # tags.of(node).add("Environment", "Dev")
 
         sgEc2MskCluster = ec2.SecurityGroup(self, "sgEc2MskCluster",
             security_group_name = f"{parameters.project}-{parameters.env}-{parameters.app}-sgEc2MskCluster",
@@ -224,35 +225,35 @@ class dataFeedMskAwsBlogStack(Stack):
             encryption_key=customerManagedKey
         )
         
-        mskCluster = msk.CfnCluster(
-            self, "mskCluster",
-            cluster_name = f"{parameters.project}-{parameters.env}-{parameters.app}-mskCluster",
-            kafka_version = parameters.mskVersion,
-            number_of_broker_nodes = parameters.mskNumberOfBrokerNodes,
-            broker_node_group_info = msk.CfnCluster.BrokerNodeGroupInfoProperty(
-                instance_type = parameters.mskClusterInstanceType,
-                client_subnets = vpc.select_subnets(subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS).subnet_ids[:2],
-                security_groups = [sgMskCluster.security_group_id],
-                storage_info = msk.CfnCluster.StorageInfoProperty(
-                    ebs_storage_info = msk.CfnCluster.EBSStorageInfoProperty(
-                        volume_size = parameters.mskClusterVolumeSize
-                    )
-                )
-            ),
-            client_authentication = msk.CfnCluster.ClientAuthenticationProperty(
-                sasl = msk.CfnCluster.SaslProperty(
-                    scram = msk.CfnCluster.ScramProperty(
-                        enabled = parameters.mskScramPropertyEnable
-                    )
-                )
-            ),
-            encryption_info = msk.CfnCluster.EncryptionInfoProperty(
-                encryption_in_transit = msk.CfnCluster.EncryptionInTransitProperty(
-                    client_broker = parameters.mskEncryptionClientBroker,
-                    in_cluster = parameters.mskEncryptionInClusterEnable
-                )
-            )
-        )
+        # mskCluster = msk.CfnCluster(
+        #     self, "mskCluster",
+        #     cluster_name = f"{parameters.project}-{parameters.env}-{parameters.app}-mskCluster",
+        #     kafka_version = parameters.mskVersion,
+        #     number_of_broker_nodes = parameters.mskNumberOfBrokerNodes,
+        #     broker_node_group_info = msk.CfnCluster.BrokerNodeGroupInfoProperty(
+        #         instance_type = parameters.mskClusterInstanceType,
+        #         client_subnets = vpc.select_subnets(subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS).subnet_ids[:2],
+        #         security_groups = [sgMskCluster.security_group_id],
+        #         storage_info = msk.CfnCluster.StorageInfoProperty(
+        #             ebs_storage_info = msk.CfnCluster.EBSStorageInfoProperty(
+        #                 volume_size = parameters.mskClusterVolumeSize
+        #             )
+        #         )
+        #     ),
+        #     client_authentication = msk.CfnCluster.ClientAuthenticationProperty(
+        #         sasl = msk.CfnCluster.SaslProperty(
+        #             scram = msk.CfnCluster.ScramProperty(
+        #                 enabled = parameters.mskScramPropertyEnable
+        #             )
+        #         )
+        #     ),
+        #     encryption_info = msk.CfnCluster.EncryptionInfoProperty(
+        #         encryption_in_transit = msk.CfnCluster.EncryptionInTransitProperty(
+        #             client_broker = parameters.mskEncryptionClientBroker,
+        #             in_cluster = parameters.mskEncryptionInClusterEnable
+        #         )
+        #     )
+        # )
 
         # mskAlphaCluster = msk_alpha.Cluster(
         #     self, "mskAlphaCluster",
@@ -275,10 +276,10 @@ class dataFeedMskAwsBlogStack(Stack):
         #     )
         # )
 
-        batchScramSecret = msk.CfnBatchScramSecret(self, "batchScramSecret",
-            cluster_arn = mskCluster.attr_arn,
-            secret_arn_list = [secretManager.secret_arn]
-        )
+        # batchScramSecret = msk.CfnBatchScramSecret(self, "batchScramSecret",
+        #     cluster_arn = mskCluster.attr_arn,
+        #     secret_arn_list = [secretManager.secret_arn]
+        # )
         
         keyPair = ec2.KeyPair.from_key_pair_name(self, "MyKeyPair", parameters.keyPairName)
 
@@ -383,6 +384,36 @@ class dataFeedMskAwsBlogStack(Stack):
             parallelism_per_kpu = parameters.apacheFlinkParallelismPerKpu,
             checkpointing_enabled = parameters.apacheFlinkCheckpointingEnabled,
             log_group = flinkAppLogGroup
+        )
+
+        sgOpenSearch = ec2.SecurityGroup(self, "sgOpenSearch",
+            security_group_name = f"{parameters.project}-{parameters.env}-{parameters.app}-sgOpenSearch",
+            vpc = vpc,
+            description = "Security group associated with the opensearch",
+            allow_all_outbound = True,
+            disable_inline_rules = True
+        )
+
+        sgOpenSearch.add_ingress_rule(
+            peer = ec2.Peer.any_ipv4(),
+            connection = ec2.Port.tcp_range(0, 65535),
+            description = "Allow all TCP traffic from internet"
+        )
+
+        openSearchDomain = opensearch.Domain(self, "openSearchDomain",
+            version = EngineVersion.OPENSEARCH_2_11,
+            domain_name = f"{parameters.project}-{parameters.env}-{parameters.app}-openSearchDomain",
+            vpc = vpc,
+            vpc_subnets = ec2.SubnetSelection(subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS),
+            security_groups = sgOpenSearch
+            ebs = EbsOptions(
+                volume_size = 10,
+                volume_type = ec2.EbsDeviceVolumeType.GENERAL_PURPOSE_SSD
+            ),
+            node_to_node_encryption = True,
+            encryption_at_rest = EncryptionAtRestOptions(
+                enabled = True
+            )
         )
 
         CfnOutput(self, "vpcId",
