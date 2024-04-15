@@ -49,3 +49,18 @@ apacheFlinkKinesisSourceStream = "input-stream"
 apacheFlinkParallelism = 1
 apacheFlinkParallelismPerKpu = 1
 apacheFlinkCheckpointingEnabled = True
+
+# OpenSearch
+
+openSearchVersion = "2.11"
+no_of_master_nodes = 3
+no_of_data_nodes = 10
+master_node_instance_type = "m6g.large.search"
+data_node_instance_type = "r5.large.search"
+openSearchVolumeSize = 10
+openSearchEnableHttps = True
+openSearchNodeToNodeEncryption = True
+openSearchEncryptionAtRest = True
+openSearchMasterUsername = "uzair"
+openSearchAvailabilityZoneCount = 3
+openSearchAvailabilityZoneEnable = True
