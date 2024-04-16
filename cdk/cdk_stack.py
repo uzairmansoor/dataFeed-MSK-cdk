@@ -12,6 +12,7 @@ from aws_cdk import (
     aws_s3 as s3,
     aws_iam as iam,
     aws_msk as msk,
+    aws_ssm as ssm,
     # aws_msk_alpha as msk_alpha,
     aws_secretsmanager as secretsmanager,
     aws_opensearchservice as opensearch,
@@ -225,18 +226,32 @@ class dataFeedMskAwsBlogStack(Stack):
             description = "Secrets for MSK Cluster",
             secret_name = f"AmazonMSK_/-{parameters.project}-{parameters.env}-{parameters.app}-secret",
             generate_secret_string = secretsmanager.SecretStringGenerator(
-                secret_string_template = json.dumps({"username": parameters.username}),
+                secret_string_template = json.dumps({"username": parameters.username, "password": parameters.password }),
                 generate_string_key = "password"
             ),
             encryption_key=customerManagedKey
         )
 
-        mskClusterPassword = secretsmanager.Secret.from_secret_name_v2(
-            self, "mskClusterPassword",
-            secret_name = secretManager.secret_name
-        )
-        mskClusterPasswordSecretValue = mskClusterPassword.secret_value
+        # mskClusterPassword = secretsmanager.Secret.from_secret_name_v2(
+        #     self, "mskClusterPassword",
+        #     secret_name = secretManager.secret_name
+        # )
+        mskClusterPasswordSecretValue = secretManager.secret_value
         
+        # ssm_parameter_value = json.loads(mskClusterPasswordSecretValue.to_string())
+        # ssm_parameter_value = json.loads(mskClusterPasswordSecretValue.secret_value.to_string())
+        # password = ssm_parameter_value["password"]
+
+        # password_json = json.loads(mskClusterPasswordSecretValue)
+        # password_value = password_json["password"]
+        msk_cluster_password_secret_value = mskClusterPasswordSecretValue.unsafe_unwrap() #.to_string()
+        print("VAlue", msk_cluster_password_secret_value)
+        CfnOutput(self, "Outputvalue", value=msk_cluster_password_secret_value)
+        # ssm_parameter = ssm.StringParameter(self, "mySsmParameter",
+        #     parameter_name="mySsmParameter",
+        #     string_value=msk_cluster_password_secret_value[1],
+        #     tier=ssm.ParameterTier.ADVANCED
+        # )
         # mskCluster = msk.CfnCluster(
         #     self, "mskCluster",
         #     cluster_name = f"{parameters.project}-{parameters.env}-{parameters.app}-mskCluster",
@@ -278,55 +293,55 @@ class dataFeedMskAwsBlogStack(Stack):
         
         keyPair = ec2.KeyPair.from_key_pair_name(self, "MyKeyPair", parameters.keyPairName)
 
-        kafkaClientEC2Instance = ec2.Instance(self, "kafkaClientEC2Instance",
-            instance_name = f"{parameters.project}-{parameters.env}-{parameters.app}-kafkaClientEC2Instance",
-            vpc = vpc,
-            instance_type = ec2.InstanceType.of(ec2.InstanceClass(parameters.instanceClass), ec2.InstanceSize(parameters.instanceSize)),
-            machine_image = ec2.AmazonLinuxImage(generation=ec2.AmazonLinuxGeneration.AMAZON_LINUX_2), #ec2.MachineImage().lookup(name = parameters.amiName),
-            availability_zone = vpc.availability_zones[1],
-            # block_devices = ec2.BlockDevice(
-            #     device_name="deviceName",
-            #     volume=ec2.BlockDeviceVolume.ebs(8)
-            # ),
-            vpc_subnets = ec2.SubnetSelection(subnet_type=ec2.SubnetType.PUBLIC),
-            key_pair = keyPair,
-            security_group = sgEc2MskCluster,
-            user_data = ec2.UserData.for_linux(),
-            role = ec2MskClusterRole
-        )
-        secret_value = secretManager.secret_value_from_json("username")
-        secret_string = secret_value.to_string()
-        # print(f"secret_string: {secret_string}")
-        # secret_dict = json.loads(secret_string)
-        # username = secret_dict["username"]
-        # password = secret_dict["password"]
+        # kafkaClientEC2Instance = ec2.Instance(self, "kafkaClientEC2Instance",
+        #     instance_name = f"{parameters.project}-{parameters.env}-{parameters.app}-kafkaClientEC2Instance",
+        #     vpc = vpc,
+        #     instance_type = ec2.InstanceType.of(ec2.InstanceClass(parameters.instanceClass), ec2.InstanceSize(parameters.instanceSize)),
+        #     machine_image = ec2.AmazonLinuxImage(generation=ec2.AmazonLinuxGeneration.AMAZON_LINUX_2), #ec2.MachineImage().lookup(name = parameters.amiName),
+        #     availability_zone = vpc.availability_zones[1],
+        #     # block_devices = ec2.BlockDevice(
+        #     #     device_name="deviceName",
+        #     #     volume=ec2.BlockDeviceVolume.ebs(8)
+        #     # ),
+        #     vpc_subnets = ec2.SubnetSelection(subnet_type=ec2.SubnetType.PUBLIC),
+        #     key_pair = keyPair,
+        #     security_group = sgEc2MskCluster,
+        #     user_data = ec2.UserData.for_linux(),
+        #     role = ec2MskClusterRole
+        # )
+        # secret_value = secretManager.secret_value_from_json("username")
+        # secret_string = secret_value.to_string()
+        # # print(f"secret_string: {secret_string}")
+        # # secret_dict = json.loads(secret_string)
+        # # username = secret_dict["username"]
+        # # password = secret_dict["password"]
 
-        kafkaClientEC2Instance.user_data.add_commands(
-            "sudo su",
-            "sudo yum update -y",
-            "sudo yum -y install java-11",
-            "wget https://archive.apache.org/dist/kafka/3.5.1/kafka_2.13-3.5.1.tgz",
-            "tar -xzf kafka_2.13-3.5.1.tgz",
-            "cd kafka_2.13-3.5.1/libs",
-            "wget https://github.com/aws/aws-msk-iam-auth/releases/download/v1.1.1/aws-msk-iam-auth-1.1.1-all.jar",
-            "cd /home/ec2-user",
-            "cat <<EOF > /home/ec2-user/user_jaas.conf",
-            "KafkaClient {",
-            f"    org.apache.kafka.common.security.scram.ScramLoginModule required",
-            # f"    username=\"{mskClusterPasswordSecretValue}\"",
-            f"    password=\"{mskClusterPasswordSecretValue}\";",
-            "};",
-            "EOF",
-            "export KAFKA_OPTS=-Djava.security.auth.login.config=/home/ec2-user/users_jaas.conf",
-            "mkdir tmp",
-            "cp /usr/lib/jvm/java-11-amazon-corretto.x86_64/lib/security/cacerts /home/ec2-user/tmp/kafka.client.truststore.jks",
-            "cat <<EOF > /home/ec2-user/client_sasl.properties",
-            f"security.protocol=SASL_SSL",
-            f"sasl.mechanism=SCRAM-SHA-512",
-            f"ssl.truststore.location=/home/ec2-user/tmp/kafka.client.truststore.jks",
-            "EOF",
-            # f"/kafka_2.13-3.5.1/bin/kafka-topics.sh --bootstrap-server {kafka_url} --command-config /home/ec2-user/client_sasl.properties --create --topic {parameters.topic_name}"
-        )
+        # kafkaClientEC2Instance.user_data.add_commands(
+        #     "sudo su",
+        #     "sudo yum update -y",
+        #     "sudo yum -y install java-11",
+        #     "wget https://archive.apache.org/dist/kafka/3.5.1/kafka_2.13-3.5.1.tgz",
+        #     "tar -xzf kafka_2.13-3.5.1.tgz",
+        #     "cd kafka_2.13-3.5.1/libs",
+        #     "wget https://github.com/aws/aws-msk-iam-auth/releases/download/v1.1.1/aws-msk-iam-auth-1.1.1-all.jar",
+        #     "cd /home/ec2-user",
+        #     "cat <<EOF > /home/ec2-user/user_jaas.conf",
+        #     "KafkaClient {",
+        #     f"    org.apache.kafka.common.security.scram.ScramLoginModule required",
+        #     # f"    username=\"{mskClusterPasswordSecretValue}\"",
+        #     f"    password=\"{msk_cluster_password_secret_value}\";",
+        #     "};",
+        #     "EOF",
+        #     "export KAFKA_OPTS=-Djava.security.auth.login.config=/home/ec2-user/users_jaas.conf",
+        #     "mkdir tmp",
+        #     "cp /usr/lib/jvm/java-11-amazon-corretto.x86_64/lib/security/cacerts /home/ec2-user/tmp/kafka.client.truststore.jks",
+        #     "cat <<EOF > /home/ec2-user/client_sasl.properties",
+        #     f"security.protocol=SASL_SSL",
+        #     f"sasl.mechanism=SCRAM-SHA-512",
+        #     f"ssl.truststore.location=/home/ec2-user/tmp/kafka.client.truststore.jks",
+        #     "EOF",
+        #     # f"/kafka_2.13-3.5.1/bin/kafka-topics.sh --bootstrap-server {kafka_url} --command-config /home/ec2-user/client_sasl.properties --create --topic {parameters.topic_name}"
+        # )
 
         flinkAppLogGroup = logs.LogGroup(self, "apacheFlinkAppLogGroup",
                 log_group_name = f"{parameters.project}-{parameters.env}-{parameters.app}-flinkAppLogGroup",
@@ -383,8 +398,8 @@ class dataFeedMskAwsBlogStack(Stack):
         opensearch_access_policy = iam.PolicyStatement(
             effect=iam.Effect.ALLOW,
             principals=[iam.AnyPrincipal()],
-            actions=["es:ESHttp*"],
-            resources=[]
+            actions=["es:*"],
+            resources= ["*"]#[f"{openSearchDomain.domain_arn}/*"]
         )
         
         openSearchSecretManager = secretsmanager.Secret(self, "openSearchSecrets",
@@ -402,9 +417,11 @@ class dataFeedMskAwsBlogStack(Stack):
             secret_name = openSearchSecretManager.secret_name
         )
         openSearchMasterPasswordSecretValue = openSearchMasterPassword.secret_value
+        # print(f"openSearchMasterPasswordSecretValue: {openSearchMasterPasswordSecretValue}")
         
         OPENSEARCH_VERSION = parameters.openSearchVersion
         openSearchDomain = opensearch.Domain(self, "openSearchDomain",
+            domain_name = f"awsblog-{parameters.env}-public-domain",
             version = opensearch.EngineVersion.open_search(OPENSEARCH_VERSION),
             capacity = opensearch.CapacityConfig(
                 multi_az_with_standby_enabled = parameters.multiAzWithStandByEnabled,
@@ -417,24 +434,24 @@ class dataFeedMskAwsBlogStack(Stack):
                 volume_size = parameters.openSearchVolumeSize,
                 volume_type = ec2.EbsDeviceVolumeType.GP3
             ),
-            # access_policies = [opensearch_access_policy],
+            access_policies = [opensearch_access_policy],
             enforce_https = parameters.openSearchEnableHttps,                      # Required when FGAC is enabled
             node_to_node_encryption = parameters.openSearchNodeToNodeEncryption,   # Required when FGAC is enabled
             encryption_at_rest = opensearch.EncryptionAtRestOptions(
                 enabled = parameters.openSearchEncryptionAtRest
             ),
             fine_grained_access_control = opensearch.AdvancedSecurityOptions(
-                master_user_name = "uzair",
+                master_user_name = "huzaifa",
                 master_user_password = openSearchMasterPasswordSecretValue
             )
-            vpc=vpc,
+            # vpc=vpc,
             # vpc_subnets = [ec2.SubnetSelection(subnet_type=ec2.SubnetType.PUBLIC)]
-            vpc_subnets = [
-                ec2.SubnetSelection(
-                    subnet_type=ec2.SubnetType.PUBLIC,
-                    subnet_filters=ec2.SubnetFilter.availability_zones(["availabilityZones"]) #[ec2.SubnetFilter("name": "availability-zone", "values": ["us-east-1a"])]
-                )
-            ]
+            # vpc_subnets = [
+            #     ec2.SubnetSelection(
+            #         subnet_type=ec2.SubnetType.PUBLIC,
+            #         subnet_filters=ec2.SubnetFilter.availability_zones(["availabilityZones"]) #[ec2.SubnetFilter("name": "availability-zone", "values": ["us-east-1a"])]
+            #     )
+            # ]
             # zone_awareness = opensearch.ZoneAwarenessConfig(
             #     availability_zone_count = parameters.openSearchAvailabilityZoneCount,
             #     enabled = parameters.openSearchAvailabilityZoneEnable
@@ -485,3 +502,13 @@ class dataFeedMskAwsBlogStack(Stack):
             description = "Name of an Apache Flink application",
             export_name = f"{parameters.project}-{parameters.env}-{parameters.app}-apacheFlinkAppName"
         )
+        # openSearchSecretManager.grant_read(
+        #     grantee=iam.AccountPrincipal("095773313313")  # Replace with the account ID or IAM user/role
+        # )
+        # # openSearchSecretManager.grant_read(...)
+        # # open_search_password_value = openSearchMasterPasswordSecretValue.to_string()
+        # CfnOutput(self, "openSearchPasswordValue",
+        #     value = openSearchMasterPasswordSecretValue.to_string(),
+        #     description = "Open Search Password value",
+        #     export_name = f"{parameters.project}-{parameters.env}-{parameters.app}-openSearchPasswordValue"
+        # )
