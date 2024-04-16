@@ -17,10 +17,13 @@ from aws_cdk import (
     aws_opensearchservice as opensearch,
     aws_kms as kms,
     aws_logs as logs,
-    # tags as tags,
+    Tags as tags,
     aws_opensearchservice as opensearch
     # aws_kinesisanalytics_flink_alpha as flink
 )
+# import * as cdk from 'aws-cdk-lib';
+# const accountId = cdk.Aws.ACCOUNT_ID;
+# const region = cdk.Aws.REGION;
 from . import parameters
 import aws_cdk.aws_kinesisanalytics_flink_alpha as flink
 import json
@@ -54,7 +57,7 @@ class dataFeedMskAwsBlogStack(Stack):
                 },
             ]
         )
-        # tags.of(node).add("Environment", "Dev")
+        tags.of(vpc.node).add("Environment", "Dev")
         # tags.of(node).add("Environment", "Dev")
 
         sgEc2MskCluster = ec2.SecurityGroup(self, "sgEc2MskCluster",
@@ -65,6 +68,7 @@ class dataFeedMskAwsBlogStack(Stack):
             disable_inline_rules=True
         )
         sgEc2MskCluster.add_ingress_rule(ec2.Peer.any_ipv4(), ec2.Port.tcp(22), "Allow SSH access from the internet")
+        tags.of(sgEc2MskCluster.node).add("Environment", "Dev")
 
         sgLambdaFunction = ec2.SecurityGroup(self, "sgLambdaFunction",
             security_group_name = f"{parameters.project}-{parameters.env}-{parameters.app}-sgLambdaFunction",
@@ -226,40 +230,16 @@ class dataFeedMskAwsBlogStack(Stack):
             ),
             encryption_key=customerManagedKey
         )
+
+        mskClusterPassword = secretsmanager.Secret.from_secret_name_v2(
+            self, "mskClusterPassword",
+            secret_name = secretManager.secret_name
+        )
+        mskClusterPasswordSecretValue = mskClusterPassword.secret_value
         
         # mskCluster = msk.CfnCluster(
         #     self, "mskCluster",
         #     cluster_name = f"{parameters.project}-{parameters.env}-{parameters.app}-mskCluster",
-        #     kafka_version = parameters.mskVersion,
-        #     number_of_broker_nodes = parameters.mskNumberOfBrokerNodes,
-        #     broker_node_group_info = msk.CfnCluster.BrokerNodeGroupInfoProperty(
-        #         instance_type = parameters.mskClusterInstanceType,
-        #         client_subnets = vpc.select_subnets(subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS).subnet_ids[:2],
-        #         security_groups = [sgMskCluster.security_group_id],
-        #         storage_info = msk.CfnCluster.StorageInfoProperty(
-        #             ebs_storage_info = msk.CfnCluster.EBSStorageInfoProperty(
-        #                 volume_size = parameters.mskClusterVolumeSize
-        #             )
-        #         )
-        #     ),
-        #     client_authentication = msk.CfnCluster.ClientAuthenticationProperty(
-        #         sasl = msk.CfnCluster.SaslProperty(
-        #             scram = msk.CfnCluster.ScramProperty(
-        #                 enabled = parameters.mskScramPropertyEnable
-        #             )
-        #         )
-        #     ),
-        #     encryption_info = msk.CfnCluster.EncryptionInfoProperty(
-        #         encryption_in_transit = msk.CfnCluster.EncryptionInTransitProperty(
-        #             client_broker = parameters.mskEncryptionClientBroker,
-        #             in_cluster = parameters.mskEncryptionInClusterEnable
-        #         )
-        #     )
-        # )
-
-        # mskAlphaCluster = msk_alpha.Cluster(
-        #     self, "mskAlphaCluster",
-        #     cluster_name = f"{parameters.project}-{parameters.env}-{parameters.app}-mskAlphaCluster",
         #     kafka_version = parameters.mskVersion,
         #     number_of_broker_nodes = parameters.mskNumberOfBrokerNodes,
         #     broker_node_group_info = msk.CfnCluster.BrokerNodeGroupInfoProperty(
@@ -304,10 +284,10 @@ class dataFeedMskAwsBlogStack(Stack):
             instance_type = ec2.InstanceType.of(ec2.InstanceClass(parameters.instanceClass), ec2.InstanceSize(parameters.instanceSize)),
             machine_image = ec2.AmazonLinuxImage(generation=ec2.AmazonLinuxGeneration.AMAZON_LINUX_2), #ec2.MachineImage().lookup(name = parameters.amiName),
             availability_zone = vpc.availability_zones[1],
-            blockDevices = ec2.BlockDevice(
-                device_name="deviceName",
-                volume=ec2.BlockDeviceVolume.ebs(8)
-            ),
+            # block_devices = ec2.BlockDevice(
+            #     device_name="deviceName",
+            #     volume=ec2.BlockDeviceVolume.ebs(8)
+            # ),
             vpc_subnets = ec2.SubnetSelection(subnet_type=ec2.SubnetType.PUBLIC),
             key_pair = keyPair,
             security_group = sgEc2MskCluster,
@@ -321,11 +301,6 @@ class dataFeedMskAwsBlogStack(Stack):
         # username = secret_dict["username"]
         # password = secret_dict["password"]
 
-        # print(f"username: {username}")
-        # print(f"password: {password}")
-
-        # broker_url = mskCluster.ClientAuthenticationProperty.
-
         kafkaClientEC2Instance.user_data.add_commands(
             "sudo su",
             "sudo yum update -y",
@@ -338,8 +313,8 @@ class dataFeedMskAwsBlogStack(Stack):
             "cat <<EOF > /home/ec2-user/user_jaas.conf",
             "KafkaClient {",
             f"    org.apache.kafka.common.security.scram.ScramLoginModule required",
-            # f"    username=\"{username}\"",
-            # f"    password=\"{password}\";",
+            # f"    username=\"{mskClusterPasswordSecretValue}\"",
+            f"    password=\"{mskClusterPasswordSecretValue}\";",
             "};",
             "EOF",
             "export KAFKA_OPTS=-Djava.security.auth.login.config=/home/ec2-user/users_jaas.conf",
@@ -422,16 +397,17 @@ class dataFeedMskAwsBlogStack(Stack):
             encryption_key=customerManagedKey
         )
 
-        secret_value = openSearchSecretManager.secret_value.to_json()
-        secret_json = json.loads(secret_value)
-        openSearchMasterUsername = secret_json["username"]
-        openSearchMasterPassword = secret_json["password"]
+        openSearchMasterPassword = secretsmanager.Secret.from_secret_name_v2(
+            self, "openSearchMasterPassword",
+            secret_name = openSearchSecretManager.secret_name
+        )
+        openSearchMasterPasswordSecretValue = openSearchMasterPassword.secret_value
         
         OPENSEARCH_VERSION = parameters.openSearchVersion
-        aos_domain = opensearch.Domain(self, "openSearchDomain",
-            version = opensearch.EngineVersion.open_search(
-                OPENSEARCH_VERSION),
+        openSearchDomain = opensearch.Domain(self, "openSearchDomain",
+            version = opensearch.EngineVersion.open_search(OPENSEARCH_VERSION),
             capacity = opensearch.CapacityConfig(
+                multi_az_with_standby_enabled = parameters.multiAzWithStandByEnabled,
                 master_nodes = parameters.no_of_master_nodes,
                 master_node_instance_type = parameters.master_node_instance_type,
                 data_nodes = parameters.no_of_data_nodes,
@@ -441,20 +417,28 @@ class dataFeedMskAwsBlogStack(Stack):
                 volume_size = parameters.openSearchVolumeSize,
                 volume_type = ec2.EbsDeviceVolumeType.GP3
             ),
-            access_policies = [opensearch_access_policy],
+            # access_policies = [opensearch_access_policy],
             enforce_https = parameters.openSearchEnableHttps,                      # Required when FGAC is enabled
             node_to_node_encryption = parameters.openSearchNodeToNodeEncryption,   # Required when FGAC is enabled
             encryption_at_rest = opensearch.EncryptionAtRestOptions(
                 enabled = parameters.openSearchEncryptionAtRest
             ),
             fine_grained_access_control = opensearch.AdvancedSecurityOptions(
-                master_user_name = openSearchMasterUsername,
-                master_user_password = openSearchMasterPassword
-            ),
-            zone_awareness = opensearch.ZoneAwarenessConfig(
-                availability_zone_count = parameters.openSearchAvailabilityZoneCount,
-                enabled = parameters.openSearchAvailabilityZoneEnable
+                master_user_name = "uzair",
+                master_user_password = openSearchMasterPasswordSecretValue
             )
+            vpc=vpc,
+            # vpc_subnets = [ec2.SubnetSelection(subnet_type=ec2.SubnetType.PUBLIC)]
+            vpc_subnets = [
+                ec2.SubnetSelection(
+                    subnet_type=ec2.SubnetType.PUBLIC,
+                    subnet_filters=ec2.SubnetFilter.availability_zones(["availabilityZones"]) #[ec2.SubnetFilter("name": "availability-zone", "values": ["us-east-1a"])]
+                )
+            ]
+            # zone_awareness = opensearch.ZoneAwarenessConfig(
+            #     availability_zone_count = parameters.openSearchAvailabilityZoneCount,
+            #     enabled = parameters.openSearchAvailabilityZoneEnable
+            # )
         )
 
         CfnOutput(self, "vpcId",
