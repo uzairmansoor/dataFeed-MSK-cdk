@@ -62,3 +62,17 @@
         #         enable_in_cluster = parameters.mskEncryptionInClusterEnable
         #     )
         # )
+
+                # ssm_parameter_value = json.loads(mskClusterPasswordSecretValue.to_string())
+                # ssm_parameter_value = json.loads(mskClusterPasswordSecretValue.secret_value.to_string())
+                # password = ssm_parameter_value["password"]
+
+password_value = mskClusterPasswordSecretValue.to_string()
+password_json = json.loads(password_value)
+password = password_json["password"]
+msk_cluster_password_secret_value = mskClusterPasswordSecretValue.unsafe_unwrap() #
+
+        # mskClusterPassword = secretsmanager.Secret.from_secret_name_v2(
+        #     self, "mskClusterPassword",
+        #     secret_name = secretManager.secret_name
+        # )

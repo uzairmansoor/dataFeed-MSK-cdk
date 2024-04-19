@@ -12,7 +12,7 @@ lambdaTimeout = 30
 lambdaFunctionHandler = "consumerLambdaFunction.lambda_handler"
 bucket_name = "awsblog-dev-app-us-east-1-095773313313"
 bucket_key = "consumerLambdaFunction.zip"
-username = "uzair"
+username = "somii"
 password = "Hp^73$d!n"
 
 # MSK Kafka Parameters
