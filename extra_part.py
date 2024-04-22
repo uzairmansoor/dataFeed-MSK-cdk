@@ -67,12 +67,27 @@
                 # ssm_parameter_value = json.loads(mskClusterPasswordSecretValue.secret_value.to_string())
                 # password = ssm_parameter_value["password"]
 
-password_value = mskClusterPasswordSecretValue.to_string()
-password_json = json.loads(password_value)
-password = password_json["password"]
-msk_cluster_password_secret_value = mskClusterPasswordSecretValue.unsafe_unwrap() #
+# password_value = mskClusterPasswordSecretValue.to_string()
+# password_json = json.loads(password_value)
+# password = password_json["password"]
+# msk_cluster_password_secret_value = mskClusterPasswordSecretValue.unsafe_unwrap() #
 
         # mskClusterPassword = secretsmanager.Secret.from_secret_name_v2(
         #     self, "mskClusterPassword",
         #     secret_name = secretManager.secret_name
         # )
+
+                # lambdaFunction =_lambda.Function(self, "lambdaFunction",
+        #     function_name = f"{parameters.project}-{parameters.env}-{parameters.app}-lambdaFunction",
+        #     runtime = getattr(_lambda.Runtime, parameters.lambdaRuntimeVersion),
+        #     handler = parameters.lambdaFunctionHandler,
+        #     timeout = Duration.seconds(parameters.lambdaTimeout),
+        #     code = _lambda.Code.from_bucket(bucket = bucket,key = parameters.bucket_key),
+        #     role = lambdaFunctionExecutionRole  
+        # )
+
+        # openSearchSecretManager.grant_read(
+        #     grantee=iam.AccountPrincipal("095773313313")  # Replace with the account ID or IAM user/role
+        # )
+        # # openSearchSecretManager.grant_read(...)
+        # # open_search_password_value = openSearchMasterPasswordSecretValue.to_string()
