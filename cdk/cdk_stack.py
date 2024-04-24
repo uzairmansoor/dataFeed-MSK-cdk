@@ -293,20 +293,19 @@ class dataFeedMskAwsBlogStack(Stack):
         mskClusterSecrets = secretsmanager.Secret(self, "mskClusterSecrets",
             description = "Secrets for MSK Cluster",
             secret_name = f"AmazonMSK_/-{parameters.project}-{parameters.env}-{parameters.app}-secret",
-            # generate_secret_string = secretsmanager.SecretStringGenerator(),
             generate_secret_string=secretsmanager.SecretStringGenerator(
                 generate_string_key="password",
-                secret_string_template='{"username": "%s"}' % parameters.username
+                secret_string_template='{"username": "%s"}' % parameters.username,
+                exclude_characters = ',:/@"',
             ),
             encryption_key=customerManagedKey
         )
+
 
         # msk_cluster_secrets_value = mskClusterSecrets.secret_value_from_json
         
         # username = msk_cluster_secrets_value.to_string().split(':')[1].split('"')[1]
         # password = msk_cluster_secrets_value.to_string().split(':')[3].split('"')[1]
-
-        # username = mskClusterSecrets.to_string()
         # password = mskClusterSecrets.secret_value_from_json('password').to_string()
 
         # ssm_parameter = ssm.StringParameter(self, "mskClusterUsernameParamStore",
@@ -321,13 +320,33 @@ class dataFeedMskAwsBlogStack(Stack):
         #     tier = ssm.ParameterTier.ADVANCED
         # )
 
-        mskClusterPasswordSecretValue = mskClusterSecrets.secret_value
-        mskClusterPassword = mskClusterPasswordSecretValue.unsafe_unwrap()
+        mskClusterPasswordSecretValue = mskClusterSecrets.secret_value_from_json("password").unsafe_unwrap()
+        mskClusterUsernameSecretValue = mskClusterSecrets.secret_value_from_json("username").unsafe_unwrap()
+        # mskClusterPassword = mskClusterPasswordSecretValue.unsafe_unwrap()
+        
+        # mskClusterSecrets_str = mskClusterPassword.to_string()
+
         mskClusterPwdParamStore = ssm.StringParameter(self, "mskClusterPwdParamStore",
             parameter_name = f"blogAws-{parameters.env}-mskClusterPwd-ssmParamStore",
-            string_value = mskClusterPassword,
+            string_value = mskClusterPasswordSecretValue,
             tier = ssm.ParameterTier.ADVANCED
         )
+        mskClusterPwdParamStoreValue = mskClusterPwdParamStore.string_value
+
+        # splited = mskClusterPwdParamStoreValue.split(':')
+        # print (type(mskClusterPwdParamStoreValue))
+        # parsed_data = json.loads(mskClusterPwdParamStoreValue)
+        # print (f'type parsed data{type(parsed_data)}')
+        # parsed_password = parsed_data["password"]
+        # parsed_username = parsed_data["username"]
+        # parsed_password = parsed_data[0]
+        # parsed_username = parsed_data[1]
+
+        # try:
+        #     json_object = json.loads(mskClusterPwdParamStoreValue)
+        #     print("Valid JSON string")
+        # except json.JSONDecodeError as e:
+        #     print("Invalid JSON string:", e)
 
         mskCluster = msk.CfnCluster(
             self, "mskCluster",
@@ -378,47 +397,49 @@ class dataFeedMskAwsBlogStack(Stack):
             )
         )
 
-        # kafkaClientEc2BlockDevices = ec2.BlockDevice(device_name="/dev/xvda", volume=ec2.BlockDeviceVolume.ebs(10))
-        # kafkaClientEC2Instance = ec2.Instance(self, "kafkaClientEC2Instance",
-        #     instance_name = f"{parameters.project}-{parameters.env}-{parameters.app}-kafkaClientEC2Instance",
-        #     vpc = vpc,
-        #     instance_type = ec2.InstanceType.of(ec2.InstanceClass(parameters.instanceClass), ec2.InstanceSize(parameters.instanceSize)),
-        #     machine_image = ec2.AmazonLinuxImage(generation=ec2.AmazonLinuxGeneration.AMAZON_LINUX_2), #ec2.MachineImage().lookup(name = parameters.amiName),
-        #     availability_zone = vpc.availability_zones[1],
-        #     block_devices = [kafkaClientEc2BlockDevices],
-        #     vpc_subnets = ec2.SubnetSelection(subnet_type=ec2.SubnetType.PUBLIC),
-        #     key_pair = keyPair,
-        #     security_group = sgEc2MskCluster,
-        #     user_data = ec2.UserData.for_linux(),
-        #     role = ec2MskClusterRole
-        # )
+        kafkaClientEc2BlockDevices = ec2.BlockDevice(device_name="/dev/xvda", volume=ec2.BlockDeviceVolume.ebs(10))
+        kafkaClientEC2Instance = ec2.Instance(self, "kafkaClientEC2Instance",
+            instance_name = f"{parameters.project}-{parameters.env}-{parameters.app}-kafkaClientEC2Instance",
+            vpc = vpc,
+            instance_type = ec2.InstanceType.of(ec2.InstanceClass(parameters.instanceClass), ec2.InstanceSize(parameters.instanceSize)),
+            machine_image = ec2.AmazonLinuxImage(generation=ec2.AmazonLinuxGeneration.AMAZON_LINUX_2), #ec2.MachineImage().lookup(name = parameters.amiName),
+            availability_zone = vpc.availability_zones[1],
+            block_devices = [kafkaClientEc2BlockDevices],
+            vpc_subnets = ec2.SubnetSelection(subnet_type=ec2.SubnetType.PUBLIC),
+            key_pair = keyPair,
+            security_group = sgEc2MskCluster,
+            user_data = ec2.UserData.for_linux(),
+            role = ec2MskClusterRole
+        )
 
-        # kafkaClientEC2Instance.user_data.add_commands(
-        #     "sudo su",
-        #     "sudo yum update -y",
-        #     "sudo yum -y install java-11",
-        #     "wget https://archive.apache.org/dist/kafka/3.5.1/kafka_2.13-3.5.1.tgz",
-        #     "tar -xzf kafka_2.13-3.5.1.tgz",
-        #     "cd kafka_2.13-3.5.1/libs",
-        #     "wget https://github.com/aws/aws-msk-iam-auth/releases/download/v1.1.1/aws-msk-iam-auth-1.1.1-all.jar",
-        #     "cd /home/ec2-user",
-        #     "cat <<EOF > /home/ec2-user/user_jaas.conf",
-        #     "KafkaClient {",
-        #     f"    org.apache.kafka.common.security.scram.ScramLoginModule required",
-        #     f"    username={parameters.username}",
-        #     f"    password={mskClusterPwdParamStore.string_value};",
-        #     "};",
-        #     "EOF",
-        #     "export KAFKA_OPTS=-Djava.security.auth.login.config=/home/ec2-user/users_jaas.conf",
-        #     "mkdir tmp",
-        #     "cp /usr/lib/jvm/java-11-amazon-corretto.x86_64/lib/security/cacerts /home/ec2-user/tmp/kafka.client.truststore.jks",
-        #     "cat <<EOF > /home/ec2-user/client_sasl.properties",
-        #     f"security.protocol=SASL_SSL",
-        #     f"sasl.mechanism=SCRAM-SHA-512",
-        #     f"ssl.truststore.location=/home/ec2-user/tmp/kafka.client.truststore.jks",
-        #     "EOF",
-        #     # f"/kafka_2.13-3.5.1/bin/kafka-topics.sh --bootstrap-server {kafka_url} --command-config /home/ec2-user/client_sasl.properties --create --topic {parameters.topic_name}"
-        # )
+        kafkaClientEC2Instance.user_data.add_commands(
+            "sudo su",
+            "sudo yum update -y",
+            "sudo yum -y install java-11",
+            "sudo apt install jq -y",
+            "wget https://archive.apache.org/dist/kafka/3.5.1/kafka_2.13-3.5.1.tgz",
+            "tar -xzf kafka_2.13-3.5.1.tgz",
+            "cd kafka_2.13-3.5.1/libs",
+            "wget https://github.com/aws/aws-msk-iam-auth/releases/download/v1.1.1/aws-msk-iam-auth-1.1.1-all.jar",
+            "cd /home/ec2-user",
+            "cat <<EOF > /home/ec2-user/users_jaas.conf",
+            "KafkaClient {",
+            f"    org.apache.kafka.common.security.scram.ScramLoginModule required",
+            f"    username={mskClusterUsernameSecretValue}",
+            f"    password={mskClusterPasswordSecretValue};",
+            "};",
+            "EOF",
+            "export KAFKA_OPTS=-Djava.security.auth.login.config=/home/ec2-user/users_jaas.conf",
+            f"broker_url=$(aws kafka get-bootstrap-brokers --cluster-arn {mskCluster.attr_arn} | jq -r '.BootstrapBrokerStringSaslScram')",
+            "mkdir tmp",
+            "cp /usr/lib/jvm/java-11-amazon-corretto.x86_64/lib/security/cacerts /home/ec2-user/tmp/kafka.client.truststore.jks",
+            "cat <<EOF > /home/ec2-user/client_sasl.properties",
+            f"security.protocol=SASL_SSL",
+            f"sasl.mechanism=SCRAM-SHA-512",
+            f"ssl.truststore.location=/home/ec2-user/tmp/kafka.client.truststore.jks",
+            "EOF",
+            f"/kafka_2.13-3.5.1/bin/kafka-topics.sh --bootstrap-server "$broker_url" --command-config /home/ec2-user/client_sasl.properties --create --topic {parameters.topic_name}"
+        )
 
         flinkAppLogGroup = logs.LogGroup(self, "apacheFlinkAppLogGroup",
             log_group_name = f"{parameters.project}-{parameters.env}-{parameters.app}-flinkAppLogGroup",
@@ -587,6 +608,11 @@ class dataFeedMskAwsBlogStack(Stack):
             description = "MSK cluster secrets name",
             export_name = f"{parameters.project}-{parameters.env}-{parameters.app}-mskClusterSecretsName"
         )
+        # CfnOutput(self, "mskClusterSecretsValue",
+        #     value=mskClusterSecrets_str,
+        #     description = "MSK cluster secrets value",
+        #     export_name = f"{parameters.project}-{parameters.env}-{parameters.app}-mskClusterSecretsValue"
+        # )
         CfnOutput(self, "flinkAppLogGroupArn",
             value = flinkAppLogGroup.log_group_arn,
             description = "Arn of an Apache Flink log group",
@@ -626,4 +652,22 @@ class dataFeedMskAwsBlogStack(Stack):
         #     value=openSearchDomain.domain_endpoint,
         #     description = "OpenSearch domain endpoint",
         #     export_name = f"{parameters.project}-{parameters.env}-{parameters.app}-openSearchDomainEndpoint"
+        # )
+        CfnOutput(self, "mskClusterPwdParamStoreValue",
+            value=mskClusterPwdParamStore.string_value,
+            description = "MSK cluster parameter store value",
+            export_name = f"{parameters.project}-{parameters.env}-{parameters.app}-mskClusterPwdParamStoreValue"
+        )
+        
+        # CfnOutput(self, "mskClusterPwd",
+        #     value=parsed_password,
+        #     description = "MSK cluster password",
+        #     export_name = f"{parameters.project}-{parameters.env}-{parameters.app}-mskClusterPwd"
+        # )
+        
+        
+        # CfnOutput(self, "mskClusterUsername",
+        #     value=splited[0].split(':'),
+        #     description = "MSK cluster username",
+        #     export_name = f"{parameters.project}-{parameters.env}-{parameters.app}-splited"
         # )
