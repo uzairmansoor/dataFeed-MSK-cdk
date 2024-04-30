@@ -128,7 +128,271 @@ class dataFeedMskAwsBlogStack(Stack):
         )
 
         bucket = s3.Bucket.from_bucket_name(self, "s3BucketAwsBlogArtifacts", parameters.bucket_name)
+
+        customerManagedKey = kms.Key(self, "customerManagedKey",
+            alias = f"{parameters.project}-{parameters.env}-{parameters.app}-sasl/scram-key",
+            description = "Customer managed key",
+            enable_key_rotation = True
+            # removal_policy = logs.RemovalPolicy.DESTROY
+        )
+        tags.of(customerManagedKey).add("name", f"{parameters.project}-{parameters.env}-{parameters.authorName}-{parameters.app}-customerManagedKey")
+        tags.of(customerManagedKey).add("project", parameters.project)
+        tags.of(customerManagedKey).add("env", parameters.env)
+        tags.of(customerManagedKey).add("app", parameters.app)
+
+        mskClusterSecrets = secretsmanager.Secret(self, "mskClusterSecrets",
+            description = "Secrets for MSK Cluster",
+            secret_name = f"AmazonMSK_/-{parameters.project}-{parameters.env}-{parameters.app}-secret",
+            generate_secret_string=secretsmanager.SecretStringGenerator(
+                generate_string_key="password",
+                secret_string_template='{"username": "%s"}' % parameters.username,
+                exclude_characters = ',:/\@"',
+            ),
+            encryption_key=customerManagedKey
+        )
+
+        mskClusterPasswordSecretValue = mskClusterSecrets.secret_value_from_json("password").unsafe_unwrap()
+        # mskClusterUsernameSecretValue = mskClusterSecrets.secret_value_from_json("username").unsafe_unwrap()
+
+        # mskClusterPasswordSecretValueStr = mskClusterSecrets.secret_value.unsafe_unwrap()
         
+        # mskClusterPasswordSecretValueStr = mskClusterPasswordSecretValue.to_string()
+
+        mskClusterPwdParamStore = ssm.StringParameter(self, "mskClusterPwdParamStore",
+            parameter_name = f"blogAws-{parameters.env}-mskClusterPwd-ssmParamStore",
+            string_value = mskClusterPasswordSecretValue,
+            tier = ssm.ParameterTier.STANDARD
+        )
+        mskClusterPwdParamStoreValue = mskClusterPwdParamStore.string_value
+        # mskClusterPwdParamStoreValueStr = mskClusterPasswordSecretValue.to_string()
+
+            # kafkaProducerEc2BlockDevices = ec2.BlockDevice(device_name="/dev/xvda", volume=ec2.BlockDeviceVolume.ebs(10))
+            # kafkaProducerEC2Instance = ec2.Instance(self, "kafkaProducerEC2Instance",
+            #     instance_name = f"{parameters.project}-{parameters.env}-{parameters.app}-kafkaProducerEC2Instance",
+            #     vpc = vpc,
+            #     instance_type = ec2.InstanceType.of(ec2.InstanceClass(parameters.instanceClass), ec2.InstanceSize(parameters.instanceSize)),
+            #     machine_image = ec2.AmazonLinuxImage(generation=ec2.AmazonLinuxGeneration.AMAZON_LINUX_2), #ec2.MachineImage().lookup(name = parameters.amiName),
+            #     availability_zone = vpc.availability_zones[1],
+            #     block_devices = [kafkaProducerEc2BlockDevices],
+            #     vpc_subnets = ec2.SubnetSelection(subnet_type=ec2.SubnetType.PUBLIC),
+            #     key_pair = keyPair,
+            #     security_group = sgKafkaProducer,
+            #     user_data = ec2.UserData.for_linux(),
+            #     role = ec2MskClusterRole
+            # )
+            # tags.of(kafkaProducerEC2Instance).add("name", f"{parameters.project}-{parameters.env}-{parameters.authorName}-{parameters.app}-kafkaProducerEC2Instance")
+            # tags.of(kafkaProducerEC2Instance).add("project", parameters.project)
+            # tags.of(kafkaProducerEC2Instance).add("env", parameters.env)
+            # tags.of(kafkaProducerEC2Instance).add("app", parameters.app)
+
+            # kafkaProducerEC2Instance.user_data.add_commands(
+            #     "sudo su",
+            #     "cd /home/ec2-user",
+            #     "sudo yum update -y",
+            #     "sudo yum install python3 -y",
+            #     "sudo yum install python3-pip -y",
+            #     "sudo mkdir environment",
+            #     "cd environment",
+            #     "sudo yum install python3 virtualenv -y",
+            #     "sudo pip3 install virtualenv",
+            #     "sudo python3 -m virtualenv alpaca-script",
+            #     "source alpaca-script/bin/activate",
+            #     "pip install -r <(aws s3 cp s3://kafka-flink-blog-bucket/python-scripts/requirement.txt -)",
+            #     "aws s3 cp s3://kafka-flink-blog-bucket/python-scripts/ec2-script-historic.py .",
+            #     "aws s3 cp s3://kafka-flink-blog-bucket/python-scripts/stock_mapper.py .",
+            #     "export API_KEY=PKPBAXYRYGBBDNGOBYV9",
+            #     "export SECRET_KEY=FC4vp8HUkno88tttRMYpONbOBTmcY9lcFXqc5msa",
+            #     "export export BOOTSTRAP_SERVERS={bootstrap-server-endpoint}",
+            #     "export KAFKA_SASL_MECHANISM=SCRAM-SHA-512",
+            #     f'"export KAFKA_SASL_USERNAME="{parameters.username}""',
+            #     f'"export KAFKA_SASL_PASSWORD="{mskClusterPwdParamStoreValue}""',
+            #     "python3 ec2-script-historic.py"
+            # )
+
+        server_properties = """auto.create.topics.enable=false
+default.replication.factor=3
+min.insync.replicas=2
+num.io.threads=8
+num.network.threads=5
+num.partitions=1
+num.replica.fetchers=2
+replica.lag.time.max.ms=30000
+socket.receive.buffer.bytes=102400
+socket.request.max.bytes=104857600
+socket.send.buffer.bytes=102400
+unclean.leader.election.enable=false
+zookeeper.session.timeout.ms=18000"""
+#allow.everyone.if.no.acl.found=false
+
+        cfn_configuration = msk.CfnConfiguration(self, "mskClusterConfiguration",
+            name=f"{parameters.project}-{parameters.env}-{parameters.app}-mskClusterConfiguration",
+            server_properties=server_properties,
+            description="MSK cluster configuration"
+        )
+
+        mskCluster = msk.CfnCluster(
+            self, "mskCluster",
+            cluster_name = f"{parameters.project}-{parameters.env}-{parameters.app}-mskCluster",
+            kafka_version = parameters.mskVersion,
+            number_of_broker_nodes = parameters.mskNumberOfBrokerNodes,
+            broker_node_group_info = msk.CfnCluster.BrokerNodeGroupInfoProperty(
+                instance_type = parameters.mskClusterInstanceType,
+                client_subnets = vpc.select_subnets(subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS).subnet_ids[:2],
+                security_groups = [sgMskCluster.security_group_id],
+                storage_info = msk.CfnCluster.StorageInfoProperty(  
+                    ebs_storage_info = msk.CfnCluster.EBSStorageInfoProperty(
+                        volume_size = parameters.mskClusterVolumeSize
+                    )
+                ),
+                # connectivity_info = msk.CfnCluster.ConnectivityInfoProperty(
+                #     vpc_connectivity=msk.CfnCluster.VpcConnectivityProperty(
+                #         client_authentication=msk.CfnCluster.VpcConnectivityClientAuthenticationProperty(
+                #             sasl=msk.CfnCluster.VpcConnectivitySaslProperty(
+                #                 iam=msk.CfnCluster.VpcConnectivityIamProperty(
+                #                     enabled=False
+                #                 ),
+                #                 scram=msk.CfnCluster.VpcConnectivityScramProperty(
+                #                     enabled=True
+                #                 )
+                #             ),
+                #             tls=msk.CfnCluster.VpcConnectivityTlsProperty(
+                #                 enabled=False
+                #             )
+                #         )
+                #     )
+                # )
+            ),
+            client_authentication = msk.CfnCluster.ClientAuthenticationProperty(
+                sasl = msk.CfnCluster.SaslProperty(
+                    scram = msk.CfnCluster.ScramProperty(
+                        enabled = parameters.mskScramPropertyEnable
+                    )
+                )
+            ),
+            configuration_info={
+                "arn": cfn_configuration.attr_arn,
+                "revision": cfn_configuration.attr_latest_revision_revision
+            },
+            encryption_info = msk.CfnCluster.EncryptionInfoProperty(
+                encryption_in_transit = msk.CfnCluster.EncryptionInTransitProperty(
+                    client_broker = parameters.mskEncryptionClientBroker,
+                    in_cluster = parameters.mskEncryptionInClusterEnable
+                )
+            )
+        )
+        tags.of(mskCluster).add("name", f"{parameters.project}-{parameters.env}-{parameters.authorName}-{parameters.app}-mskCluster")
+        tags.of(mskCluster).add("project", parameters.project)
+        tags.of(mskCluster).add("env", parameters.env)
+        tags.of(mskCluster).add("app", parameters.app)
+#################################################### 2nd Cluster Thing ####################################################
+        # mskCluster2 = msk.CfnCluster(
+        #     self, "mskCluster2",
+        #     cluster_name = f"{parameters.project}-{parameters.env}-{parameters.app}-mskCluster2",
+        #     kafka_version = parameters.mskVersion,
+        #     number_of_broker_nodes = parameters.mskNumberOfBrokerNodes,
+        #     broker_node_group_info = msk.CfnCluster.BrokerNodeGroupInfoProperty(
+        #         instance_type = parameters.mskClusterInstanceType,
+        #         client_subnets = vpc.select_subnets(subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS).subnet_ids[:2],
+        #         security_groups = [sgMskCluster.security_group_id],
+        #         storage_info = msk.CfnCluster.StorageInfoProperty(  
+        #             ebs_storage_info = msk.CfnCluster.EBSStorageInfoProperty(
+        #                 volume_size = parameters.mskClusterVolumeSize
+        #             )
+        #         ),
+        #         connectivity_info = msk.CfnCluster.ConnectivityInfoProperty(
+        #             vpc_connectivity=msk.CfnCluster.VpcConnectivityProperty(
+        #                 client_authentication=msk.CfnCluster.VpcConnectivityClientAuthenticationProperty(
+        #                     sasl=msk.CfnCluster.VpcConnectivitySaslProperty(
+        #                         iam=msk.CfnCluster.VpcConnectivityIamProperty(
+        #                             enabled=False
+        #                         ),
+        #                         scram=msk.CfnCluster.VpcConnectivityScramProperty(
+        #                             enabled=True
+        #                         )
+        #                     ),
+        #                     tls=msk.CfnCluster.VpcConnectivityTlsProperty(
+        #                         enabled=False
+        #                     )
+        #                 )
+        #             )
+        #         )
+        #     ),
+        #     client_authentication = msk.CfnCluster.ClientAuthenticationProperty(
+        #         sasl = msk.CfnCluster.SaslProperty(
+        #             scram = msk.CfnCluster.ScramProperty(
+        #                 enabled = parameters.mskScramPropertyEnable
+        #             )
+        #         )
+        #     ),
+        #     configuration_info={
+        #         "arn": cfn_configuration.attr_arn,
+        #         "revision": cfn_configuration.attr_latest_revision_revision
+        #     },
+        #     encryption_info = msk.CfnCluster.EncryptionInfoProperty(
+        #         encryption_in_transit = msk.CfnCluster.EncryptionInTransitProperty(
+        #             client_broker = parameters.mskEncryptionClientBroker,
+        #             in_cluster = parameters.mskEncryptionInClusterEnable
+        #         )
+        #     )
+        # )
+        # tags.of(mskCluster2).add("name", f"{parameters.project}-{parameters.env}-{parameters.authorName}-{parameters.app}-mskCluster2")
+        # tags.of(mskCluster2).add("project", parameters.project)
+        # tags.of(mskCluster2).add("env", parameters.env)
+        # tags.of(mskCluster2).add("app", parameters.app)
+
+        # batchScramSecret2 = msk.CfnBatchScramSecret(self, "mskBatchScramSecret",
+        #     cluster_arn = mskCluster2.attr_arn,
+        #     secret_arn_list = [mskClusterSecrets.secret_arn]
+        # )
+#################################################### 2nd Cluster Thing ####################################################
+        batchScramSecret = msk.CfnBatchScramSecret(self, "mskBatchScramSecret",
+            cluster_arn = mskCluster.attr_arn,
+            secret_arn_list = [mskClusterSecrets.secret_arn]
+        )
+
+        mskClusterArnParamStore = ssm.StringParameter(self, "mskClusterArnParamStore",
+            parameter_name = f"blogAws-{parameters.env}-mskClusterArn-ssmParamStore",
+            string_value = mskCluster.attr_arn,
+            tier = ssm.ParameterTier.STANDARD
+        )
+        mskClusterArnParamStoreValue = mskClusterArnParamStore.string_value
+
+        # mskClusterVpcConnection = msk.CfnVpcConnection(self, "mskClusterVpcConnection",
+        #     authentication="SASL_SCRAM",
+        #     client_subnets=vpc.select_subnets(subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS).subnet_ids[:2],
+        #     security_groups=[sgMskCluster.security_group_id],
+        #     target_cluster_arn=mskCluster.attr_arn,
+        #     vpc_id=vpc.vpc_id
+        # )
+        # tags.of(mskClusterVpcConnection).add("name", f"{parameters.project}-{parameters.env}-{parameters.authorName}-{parameters.app}-mskClusterVpcConnection")
+        # tags.of(mskClusterVpcConnection).add("project", parameters.project)
+        # tags.of(mskClusterVpcConnection).add("env", parameters.env)
+        # tags.of(mskClusterVpcConnection).add("app", parameters.app)
+
+        cross_account_id = parameters.crossAccountId
+        
+        # mskClusterPolicy = msk.CfnClusterPolicy(self, "mskClusterPolicy",
+        #     cluster_arn=mskClusterArnParamStoreValue,
+        #     policy={
+        #         "Version": "2012-10-17",
+        #         "Statement": [
+        #             {
+        #                 "Effect": "Allow",
+        #                 "Principal": {
+        #                     "AWS": [cross_account_id]
+        #                 },
+        #                 "Action": [
+        #                     "kafka:CreateVpcConnection",
+        #                     "kafka:GetBootstrapBrokers",
+        #                     "kafka:DescribeCluster",
+        #                     "kafka:DescribeClusterV2"
+        #                 ],
+        #                 "Resource": mskClusterArnParamStoreValue
+        #             }
+        #         ]
+        #     }
+        # )
+
         ec2MskClusterRole = iam.Role(self, "ec2MskClusterRole",
             role_name = f"{parameters.project}-{parameters.env}-{parameters.app}-ec2MskClusterRole",
             assumed_by=iam.ServicePrincipal("ec2.amazonaws.com")
@@ -145,22 +409,10 @@ class dataFeedMskAwsBlogStack(Stack):
                         effect = iam.Effect.ALLOW,
                         actions=[
                             "kafka:ListClusters",
-                            "kafka:DescribeCluster"
-                        ],
-                        resources= ["*"] #["arn:aws:kafka:*:*:cluster/*"]
-                    ),
-                    iam.PolicyStatement(
-                        effect = iam.Effect.ALLOW,
-                        actions=[
-                            "ec2:DescribeInstances",
-                            "ec2:DescribeInstanceAttribute",
-                            "ec2:ModifyInstanceAttribute",
-                            "ec2:DescribeSecurityGroups",
-                            "ec2:DescribeSubnets",
-                            "ec2:DescribeTags",
+                            "kafka:DescribeCluster",
+                            "kafka:DescribeClusterV2",
                             "kafka-cluster:Connect",
                             "kafka-cluster:AlterCluster",
-                            "kafka-cluster:DescribeCluster",
                             "kafka-cluster:DescribeClusterDynamicConfiguration",
                             "kafka-cluster:CreateTopic",
                             "kafka-cluster:DeleteTopic",
@@ -170,230 +422,65 @@ class dataFeedMskAwsBlogStack(Stack):
                             "kafka-cluster:DescribeGroup",
                             "kafka:GetBootstrapBrokers"
                         ],
-                        resources= ["*"] #["arn:aws:kafka:*:*:cluster/*"]
+                        resources= [mskCluster.attr_arn,
+                                    f"arn:aws:kafka:{parameters.region}:{parameters.accountId}:topic/{mskCluster.cluster_name}/*/*",
+                                    f"arn:aws:kafka:{parameters.region}:{parameters.accountId}:group/{mskCluster.cluster_name}/*/*"
+                        ]
                     ),
                     iam.PolicyStatement(
                         effect = iam.Effect.ALLOW,
                         actions=[
-                            "s3:*",
-                            "s3-object-lambda:*"
-                        ],
-                        resources= ["*"] #["arn:aws:kafka:*:*:cluster/*"]
-                    ),
-                ]
-            )
-        )
-
-        ec2KafkaProducerRole = iam.Role(self, "ec2KafkaProducerRole",
-            role_name = f"{parameters.project}-{parameters.env}-{parameters.app}-ec2KafkaProducerRole",
-            assumed_by=iam.ServicePrincipal("ec2.amazonaws.com")
-        )
-        tags.of(ec2KafkaProducerRole).add("name", f"{parameters.project}-{parameters.env}-{parameters.authorName}-{parameters.app}-ec2KafkaProducerRole")
-        tags.of(ec2KafkaProducerRole).add("project", parameters.project)
-        tags.of(ec2KafkaProducerRole).add("env", parameters.env)
-        tags.of(ec2KafkaProducerRole).add("app", parameters.app)
-
-        ec2KafkaProducerRole.attach_inline_policy(
-            iam.Policy(self, 'lambdaFunctionExecutionPolicy',
-                statements = [
-                    iam.PolicyStatement(
-                        effect = iam.Effect.ALLOW,
-                        actions=[
-                            "kafka:DescribeCluster",
-                            "kafka:DescribeClusterV2",
-                            "kafka:GetBootstrapBrokers",
-                            "ec2:CreateNetworkInterface",
-                            "ec2:DescribeNetworkInterfaces",
+                            "ec2:DescribeInstances",
+                            "ec2:DescribeInstanceAttribute",
+                            "ec2:ModifyInstanceAttribute",
                             "ec2:DescribeVpcs",
-                            "ec2:DeleteNetworkInterface",
-                            "ec2:DescribeSubnets",
                             "ec2:DescribeSecurityGroups",
-                            "logs:CreateLogGroup",
-                            "logs:CreateLogStream",
-                            "logs:PutLogEvents"
+                            "ec2:DescribeSubnets",
+                            "ec2:DescribeTags",
+                            # "ec2:CreateNetworkInterface",
+                            # "ec2:DescribeNetworkInterfaces",
+                            # "ec2:DeleteNetworkInterface",
+                            # "ec2:CreateNetworkInterface",
+                            # "ec2:DescribeNetworkInterfaces",
+                            # "ec2:DescribeSubnets",
+                            # "ec2:DeleteNetworkInterface",
+                            # "ec2:AssignPrivateIpAddresses",
+                            # "ec2:UnassignPrivateIpAddresses"
                         ],
-                        resources= ["*"] #["arn:aws:kafka:*:*:cluster/*"]
+                        resources= [f"arn:aws:ec2:{parameters.region}:{parameters.accountId}:instance/*",
+                                    f"arn:aws:ec2:{parameters.region}:{parameters.accountId}:volume/*",
+                                    f"arn:aws:ec2:{parameters.region}:{parameters.accountId}:security-group/*"
+                        ]
                     ),
                     iam.PolicyStatement(
+                        effect = iam.Effect.ALLOW,
+                        actions=[
+                            "kafka:GetBootstrapBrokers"
+                        ],
+                        resources= ["*"]
+                    ),
+                     iam.PolicyStatement(
                         effect = iam.Effect.ALLOW,
                         actions=[
                             "logs:CreateLogGroup",
                             "logs:CreateLogStream",
                             "logs:PutLogEvents",
-                            "ec2:CreateNetworkInterface",
-                            "ec2:DescribeNetworkInterfaces",
-                            "ec2:DescribeSubnets",
-                            "ec2:DeleteNetworkInterface",
-                            "ec2:AssignPrivateIpAddresses",
-                            "ec2:UnassignPrivateIpAddresses"
                         ],
-                        resources= ["*"] #["arn:aws:kafka:*:*:topic/*/*"]
+                        resources= [f"arn:aws:logs:{parameters.region}:{parameters.accountId}:log-group:okok:log-stream:*",
+                                    f"arn:aws:logs:{parameters.region}:{parameters.accountId}:log-group:*"
+                        ]
+                    ),
+                    iam.PolicyStatement(
+                        effect = iam.Effect.ALLOW,
+                        actions=[
+                            "s3:GetObject",
+                            "s3:PutObject"
+                        ],
+                        resources= [f"arn:aws:s3:::{parameters.sourceBucketName}",
+                                    f"arn:aws:s3:::{parameters.sourceBucketName}/*"
+                        ]
                     )
                 ]
-            )
-        )
-
-        # kafkaProducerEc2BlockDevices = ec2.BlockDevice(device_name="/dev/xvda", volume=ec2.BlockDeviceVolume.ebs(10))
-        # kafkaProducerEC2Instance = ec2.Instance(self, "kafkaProducerEC2Instance",
-        #     instance_name = f"{parameters.project}-{parameters.env}-{parameters.app}-kafkaProducerEC2Instance",
-        #     vpc = vpc,
-        #     instance_type = ec2.InstanceType.of(ec2.InstanceClass(parameters.instanceClass), ec2.InstanceSize(parameters.instanceSize)),
-        #     machine_image = ec2.AmazonLinuxImage(generation=ec2.AmazonLinuxGeneration.AMAZON_LINUX_2), #ec2.MachineImage().lookup(name = parameters.amiName),
-        #     availability_zone = vpc.availability_zones[1],
-        #     block_devices = [kafkaProducerEc2BlockDevices],
-        #     vpc_subnets = ec2.SubnetSelection(subnet_type=ec2.SubnetType.PUBLIC),
-        #     key_pair = keyPair,
-        #     security_group = sgKafkaProducer,
-        #     user_data = ec2.UserData.for_linux(),
-        #     role = ec2KafkaProducerRole
-        # )
-        # tags.of(kafkaProducerEC2Instance).add("name", f"{parameters.project}-{parameters.env}-{parameters.authorName}-{parameters.app}-kafkaProducerEC2Instance")
-        # tags.of(kafkaProducerEC2Instance).add("project", parameters.project)
-        # tags.of(kafkaProducerEC2Instance).add("env", parameters.env)
-        # tags.of(kafkaProducerEC2Instance).add("app", parameters.app)
-
-        # kafkaProducerEC2Instance.user_data.add_commands(
-        #     "sudo su",
-        #     "sudo yum update -y",
-        #     "sudo yum install python3 -y",
-        #     "sudo yum install python3-pip -y",
-        #     "sudo mkdir environment",
-        #     "cd environment",
-        #     "sudo yum install python3 virtualenv -y",
-        #     "sudo python3 -m virtualenv alpaca-script",
-        #     "source alpaca-script/bin/activate",
-        #     "pip install -r <(aws s3 cp s3://kafka-flink-blog-bucket/python-scripts/requirement.txt -)",
-        #     "aws s3 cp s3://kafka-flink-blog-bucket/python-scripts/ec2-script-historic.py .",
-        #     "aws s3 cp s3://kafka-flink-blog-bucket/python-scripts/stock_mapper.py .",
-        #     "export API_KEY=PKPBAXYRYGBBDNGOBYV9",
-        #     "export SECRET_KEY=FC4vp8HUkno88tttRMYpONbOBTmcY9lcFXqc5msa",
-        #     "export export BOOTSTRAP_SERVERS={bootstrap-server-endpoint}",
-        #     "export KAFKA_SASL_MECHANISM=SCRAM-SHA-512",
-        #     "export KAFKA_SASL_USERNAME={your-username}",
-        #     "export KAFKA_SASL_PASSWORD={your-password}"
-        # )
-
-        customerManagedKey = kms.Key(self, "customerManagedKey",
-            alias = f"{parameters.project}-{parameters.env}-{parameters.app}-sasl/scram-key",
-            description = "Customer managed key",
-            enable_key_rotation = True
-            # removal_policy = logs.RemovalPolicy.DESTROY
-        )
-        tags.of(customerManagedKey).add("name", f"{parameters.project}-{parameters.env}-{parameters.authorName}-{parameters.app}-customerManagedKey")
-        tags.of(customerManagedKey).add("project", parameters.project)
-        tags.of(customerManagedKey).add("env", parameters.env)
-        tags.of(customerManagedKey).add("app", parameters.app)
-
-        # mskClusterSecrets = secretsmanager.Secret(self, "mskClusterSecrets",
-        #     description = "Secrets for MSK Cluster",
-        #     secret_name = f"AmazonMSK_/-{parameters.project}-{parameters.env}-{parameters.app}-secret",
-        #     generate_secret_string = secretsmanager.SecretStringGenerator(),
-        #     encryption_key=customerManagedKey
-        # )
-        mskClusterSecrets = secretsmanager.Secret(self, "mskClusterSecrets",
-            description = "Secrets for MSK Cluster",
-            secret_name = f"AmazonMSK_/-{parameters.project}-{parameters.env}-{parameters.app}-secret",
-            generate_secret_string=secretsmanager.SecretStringGenerator(
-                generate_string_key="password",
-                secret_string_template='{"username": "%s"}' % parameters.username,
-                exclude_characters = ',:/@"',
-            ),
-            encryption_key=customerManagedKey
-        )
-
-
-        # msk_cluster_secrets_value = mskClusterSecrets.secret_value_from_json
-        
-        # username = msk_cluster_secrets_value.to_string().split(':')[1].split('"')[1]
-        # password = msk_cluster_secrets_value.to_string().split(':')[3].split('"')[1]
-        # password = mskClusterSecrets.secret_value_from_json('password').to_string()
-
-        # ssm_parameter = ssm.StringParameter(self, "mskClusterUsernameParamStore",
-        #     parameter_name = f"blogAws-{parameters.env}-username-ssmParamStore",
-        #     string_value = username,
-        #     tier = ssm.ParameterTier.ADVANCED
-        # )
-
-        # ssm_parameter = ssm.StringParameter(self, "mskClusterPasswordParamStore",
-        #     parameter_name = f"blogAws-{parameters.env}-password-ssmParamStore",
-        #     string_value = password,
-        #     tier = ssm.ParameterTier.ADVANCED
-        # )
-
-        mskClusterPasswordSecretValue = mskClusterSecrets.secret_value_from_json("password").unsafe_unwrap()
-        mskClusterUsernameSecretValue = mskClusterSecrets.secret_value_from_json("username").unsafe_unwrap()
-        # mskClusterPassword = mskClusterPasswordSecretValue.unsafe_unwrap()
-        
-        # mskClusterSecrets_str = mskClusterPassword.to_string()
-
-        mskClusterPwdParamStore = ssm.StringParameter(self, "mskClusterPwdParamStore",
-            parameter_name = f"blogAws-{parameters.env}-mskClusterPwd-ssmParamStore",
-            string_value = mskClusterPasswordSecretValue,
-            tier = ssm.ParameterTier.ADVANCED
-        )
-        mskClusterPwdParamStoreValue = mskClusterPwdParamStore.string_value
-
-        # splited = mskClusterPwdParamStoreValue.split(':')
-        # print (type(mskClusterPwdParamStoreValue))
-        # parsed_data = json.loads(mskClusterPwdParamStoreValue)
-        # print (f'type parsed data{type(parsed_data)}')
-        # parsed_password = parsed_data["password"]
-        # parsed_username = parsed_data["username"]
-        # parsed_password = parsed_data[0]
-        # parsed_username = parsed_data[1]
-
-        # try:
-        #     json_object = json.loads(mskClusterPwdParamStoreValue)
-        #     print("Valid JSON string")
-        # except json.JSONDecodeError as e:
-        #     print("Invalid JSON string:", e)
-
-        mskCluster = msk.CfnCluster(
-            self, "mskCluster",
-            cluster_name = f"{parameters.project}-{parameters.env}-{parameters.app}-mskCluster",
-            kafka_version = parameters.mskVersion,
-            number_of_broker_nodes = parameters.mskNumberOfBrokerNodes,
-            broker_node_group_info = msk.CfnCluster.BrokerNodeGroupInfoProperty(
-                instance_type = parameters.mskClusterInstanceType,
-                client_subnets = vpc.select_subnets(subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS).subnet_ids[:2],
-                security_groups = [sgMskCluster.security_group_id],
-                storage_info = msk.CfnCluster.StorageInfoProperty(  
-                    ebs_storage_info = msk.CfnCluster.EBSStorageInfoProperty(
-                        volume_size = parameters.mskClusterVolumeSize
-                    )
-                )
-            ),
-            client_authentication = msk.CfnCluster.ClientAuthenticationProperty(
-                sasl = msk.CfnCluster.SaslProperty(
-                    scram = msk.CfnCluster.ScramProperty(
-                        enabled = parameters.mskScramPropertyEnable
-                    )
-                )
-            ),
-            encryption_info = msk.CfnCluster.EncryptionInfoProperty(
-                encryption_in_transit = msk.CfnCluster.EncryptionInTransitProperty(
-                    client_broker = parameters.mskEncryptionClientBroker,
-                    in_cluster = parameters.mskEncryptionInClusterEnable
-                )
-            )
-        )
-
-        batchScramSecret = msk.CfnBatchScramSecret(self, "mskBatchScramSecret",
-            cluster_arn = mskCluster.attr_arn,
-            secret_arn_list = [mskClusterSecrets.secret_arn]
-        )
-        # batchScramSecret.add_depends_on(mskCluster)
-
-        get_tls_brokers = cr.AwsCustomResource(self, "get_tls_brokers", 
-            on_create=cr.AwsSdkCall(
-                service="Kafka",
-                action="getBootstrapBrokers",
-                parameters={"ClusterArn": mskCluster.attr_arn},
-                region=app_region,
-                physical_resource_id=cr.PhysicalResourceId.of('TLS-BOOTSTRAP_BROKERS-'+app_region)
-            ),
-            policy=cr.AwsCustomResourcePolicy.from_sdk_calls(
-                resources=cr.AwsCustomResourcePolicy.ANY_RESOURCE
             )
         )
 
@@ -416,7 +503,7 @@ class dataFeedMskAwsBlogStack(Stack):
             "sudo su",
             "sudo yum update -y",
             "sudo yum -y install java-11",
-            "sudo apt install jq -y",
+            "sudo yum install jq -y",
             "wget https://archive.apache.org/dist/kafka/3.5.1/kafka_2.13-3.5.1.tgz",
             "tar -xzf kafka_2.13-3.5.1.tgz",
             "cd kafka_2.13-3.5.1/libs",
@@ -425,12 +512,12 @@ class dataFeedMskAwsBlogStack(Stack):
             "cat <<EOF > /home/ec2-user/users_jaas.conf",
             "KafkaClient {",
             f"    org.apache.kafka.common.security.scram.ScramLoginModule required",
-            f"    username={mskClusterUsernameSecretValue}",
-            f"    password={mskClusterPasswordSecretValue};",
+            f'    username="{parameters.username}"',
+            f'    password="{mskClusterPwdParamStoreValue}";',
             "};",
             "EOF",
             "export KAFKA_OPTS=-Djava.security.auth.login.config=/home/ec2-user/users_jaas.conf",
-            f"broker_url=$(aws kafka get-bootstrap-brokers --cluster-arn {mskCluster.attr_arn} | jq -r '.BootstrapBrokerStringSaslScram')",
+            f"broker_url=$(aws kafka get-bootstrap-brokers --cluster-arn {mskCluster.attr_arn} --region {parameters.region}| jq -r '.BootstrapBrokerStringSaslScram')",
             "mkdir tmp",
             "cp /usr/lib/jvm/java-11-amazon-corretto.x86_64/lib/security/cacerts /home/ec2-user/tmp/kafka.client.truststore.jks",
             "cat <<EOF > /home/ec2-user/client_sasl.properties",
@@ -438,8 +525,78 @@ class dataFeedMskAwsBlogStack(Stack):
             f"sasl.mechanism=SCRAM-SHA-512",
             f"ssl.truststore.location=/home/ec2-user/tmp/kafka.client.truststore.jks",
             "EOF",
-            f"/kafka_2.13-3.5.1/bin/kafka-topics.sh --bootstrap-server "$broker_url" --command-config /home/ec2-user/client_sasl.properties --create --topic {parameters.topic_name}"
+            f"/kafka_2.13-3.5.1/bin/kafka-topics.sh --bootstrap-server \"$broker_url\" --command-config /home/ec2-user/client_sasl.properties --create --topic {parameters.topicName1}",
+            f"/kafka_2.13-3.5.1/bin/kafka-topics.sh --bootstrap-server \"$broker_url\" --command-config /home/ec2-user/client_sasl.properties --create --topic {parameters.topicName2}",
+
+            "cd /home/ec2-user",
+            "sudo yum update -y",
+            "sudo yum install python3 -y",
+            "sudo yum install python3-pip -y",
+            "sudo mkdir environment",
+            "cd environment",
+            "sudo yum install python3 virtualenv -y",
+            "sudo pip3 install virtualenv",
+            "sudo python3 -m virtualenv alpaca-script",
+            "source alpaca-script/bin/activate",
+            f"pip install -r <(aws s3 cp s3://{parameters.sourceBucketName}/python-scripts/requirement.txt -)",
+            f"aws s3 cp s3://{parameters.sourceBucketName}/python-scripts/ec2-script-historic.py .",
+            f"aws s3 cp s3://{parameters.sourceBucketName}/python-scripts/stock_mapper.py .",
+            "export API_KEY=PKPBAXYRYGBBDNGOBYV9",
+            "export SECRET_KEY=FC4vp8HUkno88tttRMYpONbOBTmcY9lcFXqc5msa",
+            "export export BOOTSTRAP_SERVERS={bootstrap-server-endpoint}",
+            "export KAFKA_SASL_MECHANISM=SCRAM-SHA-512",
+            f'"export KAFKA_SASL_USERNAME="{parameters.username}""',
+            f'"export KAFKA_SASL_PASSWORD="{mskClusterPwdParamStoreValue}""',
+            "python3 ec2-script-historic.py"
         )
+    
+        opensearch_access_policy = iam.PolicyStatement(
+            effect=iam.Effect.ALLOW,
+            principals=[iam.AnyPrincipal()],
+            actions=["es:*"],
+            resources= ["*"]#[f"{openSearchDomain.domain_arn}/*"]
+        )
+
+        openSearchSecrets = secretsmanager.Secret(self, "openSearchSecrets",
+            description = "Secrets for OpenSearch",
+            secret_name = f"{parameters.project}-{parameters.env}-{parameters.app}-openSearchSecrets",
+            generate_secret_string = secretsmanager.SecretStringGenerator(),
+            encryption_key=customerManagedKey
+        )
+
+        openSearchMasterPasswordSecretValue = openSearchSecrets.secret_value
+        openSearchMasterPasswordSecretValueStr = openSearchMasterPasswordSecretValue.to_string()
+        openSearchMaster = openSearchMasterPasswordSecretValue.unsafe_unwrap()
+
+        OPENSEARCH_VERSION = parameters.openSearchVersion
+        openSearchDomain = opensearch.Domain(self, "openSearchDomain",
+            domain_name = f"awsblog-{parameters.env}-public-domain",
+            version = opensearch.EngineVersion.open_search(OPENSEARCH_VERSION),
+            capacity = opensearch.CapacityConfig(
+                multi_az_with_standby_enabled = parameters.multiAzWithStandByEnabled,
+                master_nodes = parameters.no_of_master_nodes,
+                master_node_instance_type = parameters.master_node_instance_type,
+                data_nodes = parameters.no_of_data_nodes,
+                data_node_instance_type = parameters.data_node_instance_type
+            ),
+            ebs = opensearch.EbsOptions(
+                volume_size = parameters.openSearchVolumeSize,
+                volume_type = ec2.EbsDeviceVolumeType.GP3
+            ),
+            access_policies = [opensearch_access_policy],
+            enforce_https = parameters.openSearchEnableHttps,                      # Required when FGAC is enabled
+            node_to_node_encryption = parameters.openSearchNodeToNodeEncryption,   # Required when FGAC is enabled
+            encryption_at_rest = opensearch.EncryptionAtRestOptions(
+                enabled = parameters.openSearchEncryptionAtRest
+            ),
+            fine_grained_access_control = opensearch.AdvancedSecurityOptions(
+                master_user_name = parameters.openSearchMasterUsername,
+                master_user_password = openSearchMasterPasswordSecretValue
+            )
+        )
+
+        openSearchDomainEndpoint = openSearchDomain.domain_endpoint
+        # openSearchDomainEndpointStr = openSearchDomainEndpoint
 
         flinkAppLogGroup = logs.LogGroup(self, "apacheFlinkAppLogGroup",
             log_group_name = f"{parameters.project}-{parameters.env}-{parameters.app}-flinkAppLogGroup",
@@ -449,8 +606,15 @@ class dataFeedMskAwsBlogStack(Stack):
 
         apacheFlinkAppRole = iam.Role(self, "apacheFlinkAppRole",
             role_name = f"{parameters.project}-{parameters.env}-{parameters.app}-apacheFlinkAppRole",
-            assumed_by=iam.ServicePrincipal("kinesisanalytics.amazonaws.com")
+            assumed_by=iam.ServicePrincipal("kinesisanalytics.amazonaws.com"),
+            managed_policies = [
+                iam.ManagedPolicy.from_aws_managed_policy_name("AmazonMSKReadOnlyAccess")
+            ]
         )
+        tags.of(ec2MskClusterRole).add("name", f"{parameters.project}-{parameters.env}-{parameters.authorName}-{parameters.app}-apacheFlinkAppRole")
+        tags.of(ec2MskClusterRole).add("project", parameters.project)
+        tags.of(ec2MskClusterRole).add("env", parameters.env)
+        tags.of(ec2MskClusterRole).add("app", parameters.app)
 
         apacheFlinkAppRole.attach_inline_policy(
             iam.Policy(self, 'apacheFlinkAppPolicy',
@@ -469,6 +633,29 @@ class dataFeedMskAwsBlogStack(Stack):
                             "logs:DescribeLogGroups"
                         ],
                         resources = [flinkAppLogGroup.log_group_arn]
+                    ),
+                    iam.PolicyStatement(
+                        effect = iam.Effect.ALLOW,
+                        actions = [
+                            "ec2:DescribeVpcs",
+                            "ec2:DescribeSubnets",
+                            "ec2:DescribeSecurityGroups",
+                            "ec2:DescribeDhcpOptions"
+                        ],
+                        resources = ["*"]
+                    ),
+                    iam.PolicyStatement(
+                        effect = iam.Effect.ALLOW,
+                        actions = [
+                            "ec2:CreateNetworkInterface",
+                            # "ec2:CreateNetworkInterfacePermission",
+                            "ec2:DescribeNetworkInterfaces",
+                            "ec2:DeleteNetworkInterface"
+                        ],
+                        resources = [f"arn:aws:ec2:{parameters.region}:{parameters.accountId}:network-interface/*",
+                                     f"arn:aws:ec2:{parameters.region}:{parameters.accountId}:security-group/*",
+                                     f"arn:aws:ec2:{parameters.region}:{parameters.accountId}:subnet/*"
+                        ]
                     )
                 ]
             )
@@ -483,61 +670,29 @@ class dataFeedMskAwsBlogStack(Stack):
             auto_scaling_enabled = parameters.apacheFlinkAutoScalingEnable,
             property_groups = {
                 "FlinkApplicationProperties": {
-                    "kinesis.region" : parameters.apacheFlinkKinesisRegion, 
-                    "kinesis.sink.stream" : parameters.apacheFlinkKinesisSinkStream,
-                    "kinesis.source.stream": parameters.apacheFlinkKinesisSourceStream
+                    "msk.username" : parameters.username,
+                    "msk.password" : mskClusterPasswordSecretValue, 
+                    "opensearch.endpoint" : openSearchDomainEndpoint,
+                    "opensearch.username" : parameters.openSearchMasterUsername,
+                    "opensearch.password" : openSearchMaster, #openSearchMasterPasswordSecretValueStr,
+                    "opensearch.port" : parameters.openSearchPort,
+                    "event.ticker.interval.minutes" : parameters.eventTickerIntervalMinutes,
+                    "event.ticker.1" : parameters.topicName1,
+                    "event.ticker.2" : parameters.topicName2
                 }
             },
+            role = apacheFlinkAppRole,
             parallelism = parameters.apacheFlinkParallelism,
             parallelism_per_kpu = parameters.apacheFlinkParallelismPerKpu,
             checkpointing_enabled = parameters.apacheFlinkCheckpointingEnabled,
             log_group = flinkAppLogGroup
         )
-    
-        opensearch_access_policy = iam.PolicyStatement(
-            effect=iam.Effect.ALLOW,
-            principals=[iam.AnyPrincipal()],
-            actions=["es:*"],
-            resources= ["*"]#[f"{openSearchDomain.domain_arn}/*"]
-        )
+        tags.of(ec2MskClusterRole).add("name", f"{parameters.project}-{parameters.env}-{parameters.authorName}-{parameters.app}-apacheFlinkApp")
+        tags.of(ec2MskClusterRole).add("project", parameters.project)
+        tags.of(ec2MskClusterRole).add("env", parameters.env)
+        tags.of(ec2MskClusterRole).add("app", parameters.app)
 
-        openSearchSecrets = secretsmanager.Secret(self, "openSearchSecrets",
-            description = "Secrets for OpenSearch",
-            secret_name = f"{parameters.project}-{parameters.env}-{parameters.app}-openSearchSecrets",
-            generate_secret_string = secretsmanager.SecretStringGenerator(),
-            encryption_key=customerManagedKey
-        )
-
-        openSearchMasterPasswordSecretValue = openSearchSecrets.secret_value
-        openSearchMaster = openSearchMasterPasswordSecretValue.unsafe_unwrap()
-
-        # OPENSEARCH_VERSION = parameters.openSearchVersion
-        # openSearchDomain = opensearch.Domain(self, "openSearchDomain",
-        #     domain_name = f"awsblog-{parameters.env}-public-domain1",
-        #     version = opensearch.EngineVersion.open_search(OPENSEARCH_VERSION),
-        #     capacity = opensearch.CapacityConfig(
-        #         multi_az_with_standby_enabled = parameters.multiAzWithStandByEnabled,
-        #         master_nodes = parameters.no_of_master_nodes,
-        #         master_node_instance_type = parameters.master_node_instance_type,
-        #         data_nodes = parameters.no_of_data_nodes,
-        #         data_node_instance_type = parameters.data_node_instance_type
-        #     ),
-        #     ebs = opensearch.EbsOptions(
-        #         volume_size = parameters.openSearchVolumeSize,
-        #         volume_type = ec2.EbsDeviceVolumeType.GP3
-        #     ),
-        #     access_policies = [opensearch_access_policy],
-        #     enforce_https = parameters.openSearchEnableHttps,                      # Required when FGAC is enabled
-        #     node_to_node_encryption = parameters.openSearchNodeToNodeEncryption,   # Required when FGAC is enabled
-        #     encryption_at_rest = opensearch.EncryptionAtRestOptions(
-        #         enabled = parameters.openSearchEncryptionAtRest
-        #     ),
-        #     fine_grained_access_control = opensearch.AdvancedSecurityOptions(
-        #         master_user_name = parameters.openSearchMasterUsername,
-        #         master_user_password = openSearchMasterPasswordSecretValue
-        #     )
-        # )
-
+### OUTPUTS ###
         CfnOutput(self, "vpcId",
             value = vpc.vpc_id,
             description = "VPC Id",
@@ -562,11 +717,6 @@ class dataFeedMskAwsBlogStack(Stack):
             value=ec2MskClusterRole.role_arn,
             description = "ARN of EC2 MSK cluster role",
             export_name = f"{parameters.project}-{parameters.env}-{parameters.app}-ec2MskClusterRoleArn"
-        )
-        CfnOutput(self, "ec2KafkaProducerRoleArn",
-            value=ec2KafkaProducerRole.role_arn,
-            description = "ARN of EC2 kafka producer role",
-            export_name = f"{parameters.project}-{parameters.env}-{parameters.app}-ec2KafkaProducerRoleArn"
         )
         CfnOutput(self, "mskClusterName",
             value=mskCluster.cluster_name,
@@ -608,11 +758,6 @@ class dataFeedMskAwsBlogStack(Stack):
             description = "MSK cluster secrets name",
             export_name = f"{parameters.project}-{parameters.env}-{parameters.app}-mskClusterSecretsName"
         )
-        # CfnOutput(self, "mskClusterSecretsValue",
-        #     value=mskClusterSecrets_str,
-        #     description = "MSK cluster secrets value",
-        #     export_name = f"{parameters.project}-{parameters.env}-{parameters.app}-mskClusterSecretsValue"
-        # )
         CfnOutput(self, "flinkAppLogGroupArn",
             value = flinkAppLogGroup.log_group_arn,
             description = "Arn of an Apache Flink log group",
@@ -643,31 +788,18 @@ class dataFeedMskAwsBlogStack(Stack):
             description = "MSK cluster secrets name",
             export_name = f"{parameters.project}-{parameters.env}-{parameters.app}-openSearchSecretsName"
         )
-        # CfnOutput(self, "openSearchDomainName",
-        #     value=openSearchDomain.domain_name,
-        #     description = "OpenSearch domain name",
-        #     export_name = f"{parameters.project}-{parameters.env}-{parameters.app}-openSearchDomainName"
-        # )
-        # CfnOutput(self, "openSearchDomainEndpoint",
-        #     value=openSearchDomain.domain_endpoint,
-        #     description = "OpenSearch domain endpoint",
-        #     export_name = f"{parameters.project}-{parameters.env}-{parameters.app}-openSearchDomainEndpoint"
-        # )
+        CfnOutput(self, "openSearchDomainName",
+            value=openSearchDomain.domain_name,
+            description = "OpenSearch domain name",
+            export_name = f"{parameters.project}-{parameters.env}-{parameters.app}-openSearchDomainName"
+        )
+        CfnOutput(self, "openSearchDomainEndpoint",
+            value=openSearchDomain.domain_endpoint,
+            description = "OpenSearch domain endpoint",
+            export_name = f"{parameters.project}-{parameters.env}-{parameters.app}-openSearchDomainEndpoint"
+        )
         CfnOutput(self, "mskClusterPwdParamStoreValue",
             value=mskClusterPwdParamStore.string_value,
             description = "MSK cluster parameter store value",
             export_name = f"{parameters.project}-{parameters.env}-{parameters.app}-mskClusterPwdParamStoreValue"
         )
-        
-        # CfnOutput(self, "mskClusterPwd",
-        #     value=parsed_password,
-        #     description = "MSK cluster password",
-        #     export_name = f"{parameters.project}-{parameters.env}-{parameters.app}-mskClusterPwd"
-        # )
-        
-        
-        # CfnOutput(self, "mskClusterUsername",
-        #     value=splited[0].split(':'),
-        #     description = "MSK cluster username",
-        #     export_name = f"{parameters.project}-{parameters.env}-{parameters.app}-splited"
-        # )

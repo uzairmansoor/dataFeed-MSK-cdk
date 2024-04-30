@@ -91,3 +91,16 @@
         # )
         # # openSearchSecretManager.grant_read(...)
         # # open_search_password_value = openSearchMasterPasswordSecretValue.to_string()
+
+        get_tls_brokers = cr.AwsCustomResource(self, "get_tls_brokers", 
+            on_create=cr.AwsSdkCall(
+                service="Kafka",
+                action="getBootstrapBrokers",
+                parameters={"ClusterArn": mskCluster.attr_arn},
+                region=app_region,
+                physical_resource_id=cr.PhysicalResourceId.of('TLS-BOOTSTRAP_BROKERS-'+app_region)
+            ),
+            policy=cr.AwsCustomResourcePolicy.from_sdk_calls(
+                resources=cr.AwsCustomResourcePolicy.ANY_RESOURCE
+            )
+        )

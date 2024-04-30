@@ -20,6 +20,7 @@ bucket_name = "awsblog-dev-app-us-east-1-095773313313"
 bucket_key = "consumerLambdaFunction.zip"
 username = "uzair"
 password = "Hp^73$d!n"
+sourceBucketName = "kafka-flink-blog-bucket"
 
 # MSK Kafka Parameters
 
@@ -30,7 +31,9 @@ mskClusterVolumeSize = 100
 mskScramPropertyEnable = True
 mskEncryptionClientBroker = "TLS"
 mskEncryptionInClusterEnable = True
-topic_name = "aws-blog-topic"
+topicName1 = "amzn"
+topicName2 = "appl"
+crossAccountId = "007756798683"
 
 # Kafka Client EC2 instance Parameters
 
@@ -48,9 +51,6 @@ keyPairFormat = "PEM"
 apacheFlinkBucketKey = "kinesis-connectors-1.0.jar"
 # flinkRuntimeVersion = FLINK_1_11
 apacheFlinkAutoScalingEnable = True
-apacheFlinkKinesisRegion = "us-east-1"
-apacheFlinkKinesisSinkStream = "output-stream"
-apacheFlinkKinesisSourceStream = "input-stream"
 # flinkAppLogGroupRetentionDays = ONE_WEEK
 apacheFlinkParallelism = 1
 apacheFlinkParallelismPerKpu = 1
@@ -71,3 +71,5 @@ openSearchEncryptionAtRest = True
 openSearchMasterUsername = "uzair"
 openSearchAvailabilityZoneCount = 2
 openSearchAvailabilityZoneEnable = True
+openSearchPort = "443"
+eventTickerIntervalMinutes = "1"
