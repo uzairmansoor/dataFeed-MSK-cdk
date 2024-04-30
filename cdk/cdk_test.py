@@ -15,16 +15,12 @@ from aws_cdk import (
     aws_logs as logs,
     Tags as tags,
     aws_opensearchservice as opensearch,
-    aws_kinesisanalytics_flink_alpha as flink
+    aws_kinesisanalytics_flink_alpha as flink,
+    Aws as AWS
 )
-# const accountId = cdk.Aws.ACCOUNT_ID;
-# const region = cdk.Aws.REGION;
-# from aws_cdk import core
-from . import parameters
-import json
-import os.path
 
-app_region = os.environ["CDK_DEFAULT_REGION"]
+from . import parameters
+
 
 class dataFeedMskAwsBlogStack(Stack):
 
@@ -40,23 +36,23 @@ class dataFeedMskAwsBlogStack(Stack):
             nat_gateways = parameters.no_of_nat_gateways,
             subnet_configuration = [
                 {
-                    "name": f"{parameters.project}-{parameters.env}-{parameters.authorName}-{parameters.app}-publicSubnet1",
+                    "name": f"{parameters.project}-{parameters.env}-{parameters.app}-publicSubnet1",
                     "subnetType": ec2.SubnetType.PUBLIC,
                     "cidrMask": parameters.cidrMaskForSubnets,
                 },
                 {
-                    "name": f"{parameters.project}-{parameters.env}-{parameters.authorName}-{parameters.app}-privateSubnet1",
+                    "name": f"{parameters.project}-{parameters.env}-{parameters.app}-privateSubnet1",
                     "subnetType": ec2.SubnetType.PRIVATE_WITH_EGRESS,
                     "cidrMask": parameters.cidrMaskForSubnets,
                 },
                 {
-                    "name": f"{parameters.project}-{parameters.env}-{parameters.authorName}-{parameters.app}-isolatedSubnet-1",
+                    "name": f"{parameters.project}-{parameters.env}-{parameters.app}-isolatedSubnet-1",
                     "subnetType": ec2.SubnetType.PRIVATE_ISOLATED,
                     "cidrMask": parameters.cidrMaskForSubnets,
                 },
             ]
         )
-        tags.of(vpc).add("name", f"{parameters.project}-{parameters.env}-{parameters.authorName}-{parameters.app}-vpc")
+        tags.of(vpc).add("name", f"{parameters.project}-{parameters.env}-{parameters.app}-vpc")
         tags.of(vpc).add("project", parameters.project)
         tags.of(vpc).add("env", parameters.env)
         tags.of(vpc).add("app", parameters.app)
@@ -88,17 +84,17 @@ class dataFeedMskAwsBlogStack(Stack):
             disable_inline_rules=True
         )
         
-        tags.of(sgEc2MskCluster).add("name", f"{parameters.project}-{parameters.env}-{parameters.authorName}-{parameters.app}-sgEc2MskCluster")
+        tags.of(sgEc2MskCluster).add("name", f"{parameters.project}-{parameters.env}-{parameters.app}-sgEc2MskCluster")
         tags.of(sgEc2MskCluster).add("project", parameters.project)
         tags.of(sgEc2MskCluster).add("env", parameters.env)
         tags.of(sgEc2MskCluster).add("app", parameters.app)
 
-        tags.of(sgKafkaProducer).add("name", f"{parameters.project}-{parameters.env}-{parameters.authorName}-{parameters.app}-sgKafkaProducer")
+        tags.of(sgKafkaProducer).add("name", f"{parameters.project}-{parameters.env}-{parameters.app}-sgKafkaProducer")
         tags.of(sgKafkaProducer).add("project", parameters.project)
         tags.of(sgKafkaProducer).add("env", parameters.env)
         tags.of(sgKafkaProducer).add("app", parameters.app)
 
-        tags.of(sgMskCluster).add("name", f"{parameters.project}-{parameters.env}-{parameters.authorName}-{parameters.app}-sgMskCluster")
+        tags.of(sgMskCluster).add("name", f"{parameters.project}-{parameters.env}-{parameters.app}-sgMskCluster")
         tags.of(sgMskCluster).add("project", parameters.project)
         tags.of(sgMskCluster).add("env", parameters.env)
         tags.of(sgMskCluster).add("app", parameters.app)
@@ -135,7 +131,7 @@ class dataFeedMskAwsBlogStack(Stack):
             enable_key_rotation = True
             # removal_policy = logs.RemovalPolicy.DESTROY
         )
-        tags.of(customerManagedKey).add("name", f"{parameters.project}-{parameters.env}-{parameters.authorName}-{parameters.app}-customerManagedKey")
+        tags.of(customerManagedKey).add("name", f"{parameters.project}-{parameters.env}-{parameters.app}-customerManagedKey")
         tags.of(customerManagedKey).add("project", parameters.project)
         tags.of(customerManagedKey).add("env", parameters.env)
         tags.of(customerManagedKey).add("app", parameters.app)
@@ -179,7 +175,7 @@ class dataFeedMskAwsBlogStack(Stack):
             #     user_data = ec2.UserData.for_linux(),
             #     role = ec2MskClusterRole
             # )
-            # tags.of(kafkaProducerEC2Instance).add("name", f"{parameters.project}-{parameters.env}-{parameters.authorName}-{parameters.app}-kafkaProducerEC2Instance")
+            # tags.of(kafkaProducerEC2Instance).add("name", f"{parameters.project}-{parameters.env}-{parameters.app}-kafkaProducerEC2Instance")
             # tags.of(kafkaProducerEC2Instance).add("project", parameters.project)
             # tags.of(kafkaProducerEC2Instance).add("env", parameters.env)
             # tags.of(kafkaProducerEC2Instance).add("app", parameters.app)
@@ -279,7 +275,7 @@ zookeeper.session.timeout.ms=18000"""
                 )
             )
         )
-        tags.of(mskCluster).add("name", f"{parameters.project}-{parameters.env}-{parameters.authorName}-{parameters.app}-mskCluster")
+        tags.of(mskCluster).add("name", f"{parameters.project}-{parameters.env}-{parameters.app}-mskCluster")
         tags.of(mskCluster).add("project", parameters.project)
         tags.of(mskCluster).add("env", parameters.env)
         tags.of(mskCluster).add("app", parameters.app)
@@ -400,7 +396,7 @@ zookeeper.session.timeout.ms=18000"""
         #         )
         #     )
         # )
-        # tags.of(mskCluster2).add("name", f"{parameters.project}-{parameters.env}-{parameters.authorName}-{parameters.app}-mskCluster2")
+        # tags.of(mskCluster2).add("name", f"{parameters.project}-{parameters.env}-{parameters.app}-mskCluster2")
         # tags.of(mskCluster2).add("project", parameters.project)
         # tags.of(mskCluster2).add("env", parameters.env)
         # tags.of(mskCluster2).add("app", parameters.app)
@@ -445,7 +441,7 @@ zookeeper.session.timeout.ms=18000"""
         #     target_cluster_arn=mskCluster.attr_arn,
         #     vpc_id=vpc.vpc_id
         # )
-        # tags.of(mskClusterVpcConnection).add("name", f"{parameters.project}-{parameters.env}-{parameters.authorName}-{parameters.app}-mskClusterVpcConnection")
+        # tags.of(mskClusterVpcConnection).add("name", f"{parameters.project}-{parameters.env}-{parameters.app}-mskClusterVpcConnection")
         # tags.of(mskClusterVpcConnection).add("project", parameters.project)
         # tags.of(mskClusterVpcConnection).add("env", parameters.env)
         # tags.of(mskClusterVpcConnection).add("app", parameters.app)
@@ -478,7 +474,7 @@ zookeeper.session.timeout.ms=18000"""
             role_name = f"{parameters.project}-{parameters.env}-{parameters.app}-ec2MskClusterRole",
             assumed_by=iam.ServicePrincipal("ec2.amazonaws.com")
         )
-        tags.of(ec2MskClusterRole).add("name", f"{parameters.project}-{parameters.env}-{parameters.authorName}-{parameters.app}-ec2MskClusterRole")
+        tags.of(ec2MskClusterRole).add("name", f"{parameters.project}-{parameters.env}-{parameters.app}-ec2MskClusterRole")
         tags.of(ec2MskClusterRole).add("project", parameters.project)
         tags.of(ec2MskClusterRole).add("env", parameters.env)
         tags.of(ec2MskClusterRole).add("app", parameters.app)
@@ -597,8 +593,8 @@ zookeeper.session.timeout.ms=18000"""
             f'    password="{mskClusterPwdParamStoreValue}";',
             "};",
             "EOF",
-            "export KAFKA_OPTS=-Djava.security.auth.login.config=/home/ec2-user/users_jaas.conf",
-            f"export BOOTSTRAP_SERVERS=$(aws kafka get-bootstrap-brokers --cluster-arn {mskCluster.attr_arn} --region {parameters.region} | jq -r \'.BootstrapBrokerStringSaslScram\')",
+            "echo 'export KAFKA_OPTS=-Djava.security.auth.login.config=/home/ec2-user/users_jaas.conf' >> ~/.bashrc",
+            f'echo "export BOOTSTRAP_SERVERS=$(aws kafka get-bootstrap-brokers --cluster-arn {mskCluster.attr_arn} --region {parameters.region} | jq -r \'.BootstrapBrokerStringSaslScram\')" >> ~/.bashrc',
             "mkdir tmp",
             "cp /usr/lib/jvm/java-11-amazon-corretto.x86_64/lib/security/cacerts /home/ec2-user/tmp/kafka.client.truststore.jks",
             "cat <<EOF > /home/ec2-user/client_sasl.properties",
@@ -606,9 +602,76 @@ zookeeper.session.timeout.ms=18000"""
             f"sasl.mechanism=SCRAM-SHA-512",
             f"ssl.truststore.location=/home/ec2-user/tmp/kafka.client.truststore.jks",
             "EOF",
-            f'/kafka_2.13-3.5.1/bin/kafka-topics.sh --bootstrap-server $BOOTSTRAP_SERVERS --command-config /home/ec2-user/client_sasl.properties --create --topic {parameters.topicName1} --replication-factor 2',
-            f'/kafka_2.13-3.5.1/bin/kafka-topics.sh --bootstrap-server $BOOTSTRAP_SERVERS --command-config /home/ec2-user/client_sasl.properties --create --topic {parameters.topicName2} --replication-factor 2',
-            f'/kafka_2.13-3.5.1/bin/kafka-topics.sh --bootstrap-server $BOOTSTRAP_SERVERS --list --command-config ./client_sasl.properties',  
+            f'/kafka_2.13-3.5.1/bin/kafka-topics.sh --bootstrap-server "$(echo $BOOTSTRAP_SERVERS)" --command-config /home/ec2-user/client_sasl.properties --create --topic {parameters.topicName3} --replication-factor 2',
+            f'/kafka_2.13-3.5.1/bin/kafka-topics.sh --bootstrap-server "$(echo $BOOTSTRAP_SERVERS)" --list --command-config ./client_sasl.properties'
+        )
+            # "cd /home/ec2-user",
+            # "sudo yum update -y",
+            # "sudo yum install python3 -y",
+            # "sudo yum install python3-pip -y",
+            # "sudo mkdir environment",
+            # "cd environment",
+            # "sudo yum install python3 virtualenv -y",
+            # "sudo pip3 install virtualenv",
+            # "sudo python3 -m virtualenv alpaca-script",
+            # "source alpaca-script/bin/activate",
+            # f"pip install -r <(aws s3 cp s3://{parameters.sourceBucketName}/python-scripts/requirement.txt -)",
+            # f"aws s3 cp s3://{parameters.sourceBucketName}/python-scripts/ec2-script-historic.py .",
+            # f"aws s3 cp s3://{parameters.sourceBucketName}/python-scripts/stock_mapper.py .",
+            # "echo 'export API_KEY=PKPBAXYRYGBBDNGOBYV9' >> ~/.bashrc",
+            # "echo 'export SECRET_KEY=FC4vp8HUkno88tttRMYpONbOBTmcY9lcFXqc5msa' >> ~/.bashrc",
+            # f"echo 'export BOOTSTRAP_SERVERS=\"$broker_url\"' >> ~/.bashrc",
+            # "echo 'export KAFKA_SASL_MECHANISM=SCRAM-SHA-512' >> ~/.bashrc",
+            # f"echo 'export KAFKA_SASL_USERNAME={parameters.username}' >> ~/.bashrc",
+            # f"echo 'export KAFKA_SASL_PASSWORD={mskClusterPwdParamStoreValue}' >> ~/.bashrc",
+            # "python3 ec2-script-historic.py"
+        # )
+
+#################################################### 2nd EC2 Thing Start ####################################################
+        kafkaClientEc2BlockDevices2 = ec2.BlockDevice(device_name="/dev/xvda", volume=ec2.BlockDeviceVolume.ebs(10))
+        kafkaClientEC2Instance2 = ec2.Instance(self, "kafkaClientEC2Instance2",
+            instance_name = f"{parameters.project}-{parameters.env}-{parameters.app}-kafkaClientEC2Instance2",
+            vpc = vpc,
+            instance_type = ec2.InstanceType.of(ec2.InstanceClass(parameters.instanceClass), ec2.InstanceSize(parameters.instanceSize)),
+            machine_image = ec2.AmazonLinuxImage(generation=ec2.AmazonLinuxGeneration.AMAZON_LINUX_2), #ec2.MachineImage().lookup(name = parameters.amiName),
+            availability_zone = vpc.availability_zones[1],
+            block_devices = [kafkaClientEc2BlockDevices2],
+            vpc_subnets = ec2.SubnetSelection(subnet_type=ec2.SubnetType.PUBLIC),
+            key_pair = keyPair,
+            security_group = sgEc2MskCluster,
+            user_data = ec2.UserData.for_linux(),
+            role = ec2MskClusterRole
+        )
+
+        kafkaClientEC2Instance2.user_data.add_commands(
+            "sudo su",
+            "sudo yum update -y",
+            "sudo yum -y install java-11",
+            "sudo yum install jq -y",
+            "wget https://archive.apache.org/dist/kafka/3.5.1/kafka_2.13-3.5.1.tgz",
+            "tar -xzf kafka_2.13-3.5.1.tgz",
+            "cd kafka_2.13-3.5.1/libs",
+            "wget https://github.com/aws/aws-msk-iam-auth/releases/download/v1.1.1/aws-msk-iam-auth-1.1.1-all.jar",
+            "cd /home/ec2-user",
+            "cat <<EOF > /home/ec2-user/users_jaas.conf",
+            "KafkaClient {",
+            f"    org.apache.kafka.common.security.scram.ScramLoginModule required",
+            f'    username="{parameters.username}"',
+            f'    password="{mskClusterPwdParamStoreValue}";',
+            "};",
+            "EOF",
+            "echo 'export KAFKA_OPTS=-Djava.security.auth.login.config=/home/ec2-user/users_jaas.conf' >> ~/.bashrc",
+            f'echo "export BOOTSTRAP_SERVERS=$(aws kafka get-bootstrap-brokers --cluster-arn {mskCluster.attr_arn} --region {parameters.region} | jq -r \'.BootstrapBrokerStringSaslScram\')" >> ~/.bashrc',
+            "mkdir tmp",
+            "cp /usr/lib/jvm/java-11-amazon-corretto.x86_64/lib/security/cacerts /home/ec2-user/tmp/kafka.client.truststore.jks",
+            "cat <<EOF > /home/ec2-user/client_sasl.properties",
+            f"security.protocol=SASL_SSL",
+            f"sasl.mechanism=SCRAM-SHA-512",
+            f"ssl.truststore.location=/home/ec2-user/tmp/kafka.client.truststore.jks",
+            "EOF",
+            f'/kafka_2.13-3.5.1/bin/kafka-topics.sh --bootstrap-server "$(echo $BOOTSTRAP_SERVERS)" --command-config /home/ec2-user/client_sasl.properties --create --topic {parameters.topicName3} --replication-factor 2',
+            f'/kafka_2.13-3.5.1/bin/kafka-topics.sh --bootstrap-server "$(echo $BOOTSTRAP_SERVERS)" --list --command-config ./client_sasl.properties',
+
             "cd /home/ec2-user",
             "sudo yum update -y",
             "sudo yum install python3 -y",
@@ -622,81 +685,14 @@ zookeeper.session.timeout.ms=18000"""
             f"pip install -r <(aws s3 cp s3://{parameters.sourceBucketName}/python-scripts/requirement.txt -)",
             f"aws s3 cp s3://{parameters.sourceBucketName}/python-scripts/ec2-script-historic.py .",
             f"aws s3 cp s3://{parameters.sourceBucketName}/python-scripts/stock_mapper.py .",
-            'export API_KEY=PKPBAXYRYGBBDNGOBYV9',
-            'export SECRET_KEY=FC4vp8HUkno88tttRMYpONbOBTmcY9lcFXqc5msa',
-            'export BOOTSTRAP_SERVERS=\"$broker_url\"',
-            'export KAFKA_SASL_MECHANISM=SCRAM-SHA-512',
-            f'export KAFKA_SASL_USERNAME={parameters.username}',
-            f'export KAFKA_SASL_PASSWORD={mskClusterPwdParamStoreValue}',
+            "echo 'export API_KEY=PKPBAXYRYGBBDNGOBYV9' >> ~/.bashrc",
+            "echo 'export SECRET_KEY=FC4vp8HUkno88tttRMYpONbOBTmcY9lcFXqc5msa' >> ~/.bashrc",
+            # f"echo 'export BOOTSTRAP_SERVERS=\"$broker_url\"' >> ~/.bashrc",
+            "echo 'export KAFKA_SASL_MECHANISM=SCRAM-SHA-512' >> ~/.bashrc",
+            f"echo 'export KAFKA_SASL_USERNAME={parameters.username}' >> ~/.bashrc",
+            f"echo 'export KAFKA_SASL_PASSWORD={mskClusterPwdParamStoreValue}' >> ~/.bashrc",
             "python3 ec2-script-historic.py"
         )
-
-#################################################### 2nd EC2 Thing Start ####################################################
-        # kafkaClientEc2BlockDevices2 = ec2.BlockDevice(device_name="/dev/xvda", volume=ec2.BlockDeviceVolume.ebs(10))
-        # kafkaClientEC2Instance2 = ec2.Instance(self, "kafkaClientEC2Instance2",
-        #     instance_name = f"{parameters.project}-{parameters.env}-{parameters.app}-kafkaClientEC2Instance2",
-        #     vpc = vpc,
-        #     instance_type = ec2.InstanceType.of(ec2.InstanceClass(parameters.instanceClass), ec2.InstanceSize(parameters.instanceSize)),
-        #     machine_image = ec2.AmazonLinuxImage(generation=ec2.AmazonLinuxGeneration.AMAZON_LINUX_2), #ec2.MachineImage().lookup(name = parameters.amiName),
-        #     availability_zone = vpc.availability_zones[1],
-        #     block_devices = [kafkaClientEc2BlockDevices2],
-        #     vpc_subnets = ec2.SubnetSelection(subnet_type=ec2.SubnetType.PUBLIC),
-        #     key_pair = keyPair,
-        #     security_group = sgEc2MskCluster,
-        #     user_data = ec2.UserData.for_linux(),
-        #     role = ec2MskClusterRole
-        # )
-
-        # kafkaClientEC2Instance2.user_data.add_commands(
-        #     "sudo su",
-        #     "sudo yum update -y",
-        #     "sudo yum -y install java-11",
-        #     "sudo yum install jq -y",
-        #     "wget https://archive.apache.org/dist/kafka/3.5.1/kafka_2.13-3.5.1.tgz",
-        #     "tar -xzf kafka_2.13-3.5.1.tgz",
-        #     "cd kafka_2.13-3.5.1/libs",
-        #     "wget https://github.com/aws/aws-msk-iam-auth/releases/download/v1.1.1/aws-msk-iam-auth-1.1.1-all.jar",
-        #     "cd /home/ec2-user",
-        #     "cat <<EOF > /home/ec2-user/users_jaas.conf",
-        #     "KafkaClient {",
-        #     f"    org.apache.kafka.common.security.scram.ScramLoginModule required",
-        #     f'    username="{parameters.username}"',
-        #     f'    password="{mskClusterPwdParamStoreValue}";',
-        #     "};",
-        #     "EOF",
-        #     "echo 'export KAFKA_OPTS=-Djava.security.auth.login.config=/home/ec2-user/users_jaas.conf' >> ~/.bashrc",
-        #     f'echo "export BOOTSTRAP_SERVERS=$(aws kafka get-bootstrap-brokers --cluster-arn {mskCluster.attr_arn} --region {parameters.region} | jq -r \'.BootstrapBrokerStringSaslScram\')" >> ~/.bashrc',
-        #     "mkdir tmp",
-        #     "cp /usr/lib/jvm/java-11-amazon-corretto.x86_64/lib/security/cacerts /home/ec2-user/tmp/kafka.client.truststore.jks",
-        #     "cat <<EOF > /home/ec2-user/client_sasl.properties",
-        #     f"security.protocol=SASL_SSL",
-        #     f"sasl.mechanism=SCRAM-SHA-512",
-        #     f"ssl.truststore.location=/home/ec2-user/tmp/kafka.client.truststore.jks",
-        #     "EOF",
-        #     f'/kafka_2.13-3.5.1/bin/kafka-topics.sh --bootstrap-server "$(echo $BOOTSTRAP_SERVERS)" --command-config /home/ec2-user/client_sasl.properties --create --topic {parameters.topicName3} --replication-factor 2',
-        #     f'/kafka_2.13-3.5.1/bin/kafka-topics.sh --bootstrap-server "$(echo $BOOTSTRAP_SERVERS)" --list --command-config ./client_sasl.properties',
-
-        #     "cd /home/ec2-user",
-        #     "sudo yum update -y",
-        #     "sudo yum install python3 -y",
-        #     "sudo yum install python3-pip -y",
-        #     "sudo mkdir environment",
-        #     "cd environment",
-        #     "sudo yum install python3 virtualenv -y",
-        #     "sudo pip3 install virtualenv",
-        #     "sudo python3 -m virtualenv alpaca-script",
-        #     "source alpaca-script/bin/activate",
-        #     f"pip install -r <(aws s3 cp s3://{parameters.sourceBucketName}/python-scripts/requirement.txt -)",
-        #     f"aws s3 cp s3://{parameters.sourceBucketName}/python-scripts/ec2-script-historic.py .",
-        #     f"aws s3 cp s3://{parameters.sourceBucketName}/python-scripts/stock_mapper.py .",
-        #     "echo 'export API_KEY=PKPBAXYRYGBBDNGOBYV9' >> ~/.bashrc",
-        #     "echo 'export SECRET_KEY=FC4vp8HUkno88tttRMYpONbOBTmcY9lcFXqc5msa' >> ~/.bashrc",
-        #     # f"echo 'export BOOTSTRAP_SERVERS=\"$broker_url\"' >> ~/.bashrc",
-        #     "echo 'export KAFKA_SASL_MECHANISM=SCRAM-SHA-512' >> ~/.bashrc",
-        #     f"echo 'export KAFKA_SASL_USERNAME={parameters.username}' >> ~/.bashrc",
-        #     f"echo 'export KAFKA_SASL_PASSWORD={mskClusterPwdParamStoreValue}' >> ~/.bashrc",
-        #     "python3 ec2-script-historic.py"
-        # )
 #################################################### 2nd EC2 Thing End ####################################################
         opensearch_access_policy = iam.PolicyStatement(
             effect=iam.Effect.ALLOW,
@@ -759,7 +755,7 @@ zookeeper.session.timeout.ms=18000"""
                 iam.ManagedPolicy.from_aws_managed_policy_name("AmazonMSKReadOnlyAccess")
             ]
         )
-        tags.of(ec2MskClusterRole).add("name", f"{parameters.project}-{parameters.env}-{parameters.authorName}-{parameters.app}-apacheFlinkAppRole")
+        tags.of(ec2MskClusterRole).add("name", f"{parameters.project}-{parameters.env}-{parameters.app}-apacheFlinkAppRole")
         tags.of(ec2MskClusterRole).add("project", parameters.project)
         tags.of(ec2MskClusterRole).add("env", parameters.env)
         tags.of(ec2MskClusterRole).add("app", parameters.app)
@@ -835,7 +831,7 @@ zookeeper.session.timeout.ms=18000"""
             checkpointing_enabled = parameters.apacheFlinkCheckpointingEnabled,
             log_group = flinkAppLogGroup
         )
-        tags.of(ec2MskClusterRole).add("name", f"{parameters.project}-{parameters.env}-{parameters.authorName}-{parameters.app}-apacheFlinkApp")
+        tags.of(ec2MskClusterRole).add("name", f"{parameters.project}-{parameters.env}-{parameters.app}-apacheFlinkApp")
         tags.of(ec2MskClusterRole).add("project", parameters.project)
         tags.of(ec2MskClusterRole).add("env", parameters.env)
         tags.of(ec2MskClusterRole).add("app", parameters.app)
