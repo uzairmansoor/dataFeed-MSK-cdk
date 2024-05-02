@@ -1,71 +1,80 @@
-project = "awsblog"
-env = "qa"
-app = "app"
-authorName = "uzair"
-cidr_range = "10.20.0.0/16"
-no_of_nat_gateways = 3
-enable_dns_hostnames = True
-enable_dns_support = True
-az1 = "us-east-1a"
-az2 = "us-east-1b"
-cidrMaskForSubnets = 24
-sgMskClusterInboundPort = 0
-sgMskClusterOutboundPort = 65535
-sgKafkaInboundPort = 9092
-sgKafkaOutboundPort = 9098
-bucket_name = "awsblog-dev-app-us-east-1-095773313313"
-username = "uzair"
+project = "awsblog"             #Project name
+env = "dev"                      #Environment name
+app = "app"                     #App name
+
+###   VPC Parameters   ###
+
+cidrRange = "10.20.0.0/16"      #IPv4 CIDR range for VPC
+numberOfNatGateways = 2         #Number of NAT Gateways
+enableDnsHostnames = True       #Specify whether to enable or disable DNS support for VPC
+enableDnsSupport = True         #Specify whether to enable or disable DNS hostnames
+az1 = "us-east-1a"              #Availability Zone ID
+az2 = "us-east-1b"              #Availability Zone ID
+cidrMaskForSubnets = 24         #IPv4 CIDR Mask for Subnets
+
+###   EC2 Key Pair Parameters   ###
+
+keyPairName = "awsBlog-dev-app-us-east-1"       #EC2 Key pair name
+
+###   Security Group Parameters   ###
+
+sgMskClusterInboundPort = 0                 #Inbound Port for MSK Cluster Security Group
+sgMskClusterOutboundPort = 65535            #Outbound Port for MSK Cluster Security Group
+sgKafkaInboundPort = 9092                   #Inbound Port for MSK Cluster Security Group from EC2 Kafka Producer
+sgKafkaOutboundPort = 9098                  #Outbound Port for MSK Cluster Security Group from EC2 Kafka Producer
+crossAccountVpcCidrRange = "10.20.0.0/16"   #Cross Account IPv4 CIDR range for VPC
+
+###   S3 Bucket Parameters   ###
+
+s3BucketName = "awsblog-dev-app-us-east-1-095773313313"     #Name of S3 Bucket for Storing Code and Artifacts
 sourceBucketName = "kafka-flink-blog-bucket"
 
-# MSK Kafka Parameters
+###   Secrets Manager Parameters   ###
 
-mskVersion = "3.5.1"
-mskNumberOfBrokerNodes = 2
-mskClusterInstanceType = "kafka.m5.large"
-mskClusterVolumeSize = 100
-mskScramPropertyEnable = True
-mskEncryptionClientBroker = "TLS"
-mskEncryptionInClusterEnable = True
-topicName1 = "amzn"
-topicName2 = "appl"
-topicName3 = "sams"
-crossAccountId = "007756798683"
+mskClusterUsername = "uzair"        #Username for MSK Cluster
 
-# Kafka Client EC2 instance Parameters
+###   MSK Kafka Parameters   ###
 
-instanceClass = "BURSTABLE2"
-instanceSize = "SMALL"
-keyPairName = "awsBlog-dev-app-us-east-1"
-amiName = "ubuntu/images/hvm-ssd/ubuntu-jammy-22.04-amd64-server-20220420"
-accountId = "095773313313"
-region = "us-east-1"
-keyPairType = "RSA"
-keyPairFormat = "PEM"
+mskVersion = "3.5.1"                        #Version of MSK cluster
+mskNumberOfBrokerNodes = 2                  #Number of broker nodes of an MSK Cluster
+mskClusterInstanceType = "kafka.m5.large"   #Instance type of MSK cluster
+mskClusterVolumeSize = 100                  #Volume Size of MSK Cluster
+mskScramPropertyEnable = True               #Enable SCRAM (SASL/SCRAM) property for MSK Cluster
+mskEncryptionClientBroker = "TLS"           #Encryption protocol used for communication between clients and 
+                                            #brokers in MSK Cluster
+mskEncryptionInClusterEnable = True         #Enable Encryption in MSK Cluster
+mskTopicName1 = "googl"                     #Name of the first MSK topic
+mskTopicName2 = "tesl"                      #Name of the second MSK topic
+mskCrossAccountId = "007756798683"          #Cross Account ID for MSK
 
-# Flink
+###   MSK Client EC2 Instance Parameters   ### 
 
-apacheFlinkBucketKey = "flink-app-1.0.jar"
-# flinkRuntimeVersion = FLINK_1_11
-apacheFlinkAutoScalingEnable = True
-# flinkAppLogGroupRetentionDays = ONE_WEEK
-apacheFlinkParallelism = 1
-apacheFlinkParallelismPerKpu = 1
-apacheFlinkCheckpointingEnabled = True
+ec2InstanceClass = "BURSTABLE2"             #Instance class for EC2 instances
+ec2InstanceSize = "LARGE"                   #Size of the EC2 instance
+ec2AmiName = "ubuntu/images/hvm-ssd/ubuntu-jammy-22.04-amd64-server-20220420"   #AMI name for EC2 instances
 
-# OpenSearch
+###   Apache Flink Parameters   ###
 
-openSearchVersion = "2.11"
-multiAzWithStandByEnabled = False
-no_of_master_nodes = 0
-no_of_data_nodes = 1
-master_node_instance_type = "m5.large.search"
-data_node_instance_type = "t3.small.search"
-openSearchVolumeSize = 10
-openSearchEnableHttps = True
-openSearchNodeToNodeEncryption = True
-openSearchEncryptionAtRest = True
-openSearchMasterUsername = "uzair"
-openSearchAvailabilityZoneCount = 2
-openSearchAvailabilityZoneEnable = True
-openSearchPort = "443"
-eventTickerIntervalMinutes = "1"
+apacheFlinkBucketKey = "flink-app-1.0.jar"  #Key for accessing the Apache Flink bucket
+# apacheFlinkRuntimeVersion = "FLINK_1_11"    #Runtime version of Apache Flink
+apacheFlinkAutoScalingEnable = True         #Enable auto-scaling for Apache Flink
+apacheFlinkParallelism = 1                  #Parallelism degree for Apache Flink
+apacheFlinkParallelismPerKpu = 1            #Parallelism degree per KPU (Kinesis Processing Unit) for Apache Flink
+apacheFlinkCheckpointingEnabled = True      #Enable checkpointing for Apache Flink
+
+###   OpenSearch Parameters   ###
+
+openSearchVersion = "2.11"                          #Version of OpenSearch
+openSearchMultiAzWithStandByEnable = False          #Enable multi-AZ deployment with standby for OpenSearch
+# openSearchMasterNodes = 0                 
+openSearchDataNodes = 1                             #Number of data nodes in OpenSearch cluster
+# masterNodeInstanceType = "m5.large.search"    
+openSearchDataNodeInstanceType = "t3.small.search"  #Instance type for OpenSearch data nodes
+openSearchVolumeSize = 10                           #Volume size for OpenSearch data nodes
+openSearchNodeToNodeEncryption = True               #Enable node-to-node encryption for OpenSearch
+openSearchEncryptionAtRest = True                   #Enable encryption at rest for OpenSearch
+openSearchMasterUsername = "uzair"                  #Username for accessing OpenSearch
+openSearchAvailabilityZoneCount = 2                 #Number of AZs for OpenSearch deployment
+openSearchAvailabilityZoneEnable = True             #Enable deployment of OpenSearch across multiple AZs
+# openSearchPort = "443"                    
+eventTickerIntervalMinutes = "1"                    #Interval in minutes for event ticker

@@ -20,7 +20,7 @@ from aws_cdk import (
 # const accountId = cdk.Aws.ACCOUNT_ID;
 # const region = cdk.Aws.REGION;
 # from aws_cdk import core
-from . import parameters
+from . import parameters_test1
 import json
 import os.path
 
@@ -31,40 +31,40 @@ class dataFeedMskAwsBlogStack(Stack):
     def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
 
-        availabilityZonesList = [parameters.az1, parameters.az2]
+        availabilityZonesList = [parameters_test1.az1, parameters_test1.az2]
         vpc = ec2.Vpc (self, "vpc",
-            ip_addresses = ec2.IpAddresses.cidr(parameters.cidr_range),
-            enable_dns_hostnames = parameters.enable_dns_hostnames,
-            enable_dns_support = parameters.enable_dns_support,
+            ip_addresses = ec2.IpAddresses.cidr(parameters_test1.cidr_range),
+            enable_dns_hostnames = parameters_test1.enable_dns_hostnames,
+            enable_dns_support = parameters_test1.enable_dns_support,
             availability_zones = availabilityZonesList,
-            nat_gateways = parameters.no_of_nat_gateways,
+            nat_gateways = parameters_test1.no_of_nat_gateways,
             subnet_configuration = [
                 {
-                    "name": f"{parameters.project}-{parameters.env}-{parameters.authorName}-{parameters.app}-publicSubnet1",
+                    "name": f"{parameters_test1.project}-{parameters_test1.env}-{parameters_test1.authorName}-{parameters_test1.app}-publicSubnet1",
                     "subnetType": ec2.SubnetType.PUBLIC,
-                    "cidrMask": parameters.cidrMaskForSubnets,
+                    "cidrMask": parameters_test1.cidrMaskForSubnets,
                 },
                 {
-                    "name": f"{parameters.project}-{parameters.env}-{parameters.authorName}-{parameters.app}-privateSubnet1",
+                    "name": f"{parameters_test1.project}-{parameters_test1.env}-{parameters_test1.authorName}-{parameters_test1.app}-privateSubnet1",
                     "subnetType": ec2.SubnetType.PRIVATE_WITH_EGRESS,
-                    "cidrMask": parameters.cidrMaskForSubnets,
+                    "cidrMask": parameters_test1.cidrMaskForSubnets,
                 },
                 {
-                    "name": f"{parameters.project}-{parameters.env}-{parameters.authorName}-{parameters.app}-isolatedSubnet-1",
+                    "name": f"{parameters_test1.project}-{parameters_test1.env}-{parameters_test1.authorName}-{parameters_test1.app}-isolatedSubnet-1",
                     "subnetType": ec2.SubnetType.PRIVATE_ISOLATED,
-                    "cidrMask": parameters.cidrMaskForSubnets,
+                    "cidrMask": parameters_test1.cidrMaskForSubnets,
                 },
             ]
         )
-        tags.of(vpc).add("name", f"{parameters.project}-{parameters.env}-{parameters.authorName}-{parameters.app}-vpc")
-        tags.of(vpc).add("project", parameters.project)
-        tags.of(vpc).add("env", parameters.env)
-        tags.of(vpc).add("app", parameters.app)
+        tags.of(vpc).add("name", f"{parameters_test1.project}-{parameters_test1.env}-{parameters_test1.authorName}-{parameters_test1.app}-vpc")
+        tags.of(vpc).add("project", parameters_test1.project)
+        tags.of(vpc).add("env", parameters_test1.env)
+        tags.of(vpc).add("app", parameters_test1.app)
 
-        keyPair = ec2.KeyPair.from_key_pair_name(self, "ec2KeyPair", parameters.keyPairName)
+        keyPair = ec2.KeyPair.from_key_pair_name(self, "ec2KeyPair", parameters_test1.keyPairName)
 
         sgEc2MskCluster = ec2.SecurityGroup(self, "sgEc2MskCluster",
-            security_group_name = f"{parameters.project}-{parameters.env}-{parameters.app}-sgEc2MskCluster",
+            security_group_name = f"{parameters_test1.project}-{parameters_test1.env}-{parameters_test1.app}-sgEc2MskCluster",
             vpc=vpc,
             description="Security group associated with the EC2 instance of MSK Cluster",
             allow_all_outbound=True,
@@ -73,7 +73,7 @@ class dataFeedMskAwsBlogStack(Stack):
         
 
         sgKafkaProducer = ec2.SecurityGroup(self, "sgKafkaProducer",
-            security_group_name = f"{parameters.project}-{parameters.env}-{parameters.app}-sgKafkaProducer",
+            security_group_name = f"{parameters_test1.project}-{parameters_test1.env}-{parameters_test1.app}-sgKafkaProducer",
             vpc=vpc,
             description="Security group associated with the Lambda Function",
             allow_all_outbound=True,
@@ -81,71 +81,71 @@ class dataFeedMskAwsBlogStack(Stack):
         )
 
         sgMskCluster = ec2.SecurityGroup(self, "sgMskCluster",
-            security_group_name = f"{parameters.project}-{parameters.env}-{parameters.app}-sgMskCluster",
+            security_group_name = f"{parameters_test1.project}-{parameters_test1.env}-{parameters_test1.app}-sgMskCluster",
             vpc=vpc,
             description="Security group associated with the MSK Cluster",
             allow_all_outbound=True,
             disable_inline_rules=True
         )
         
-        tags.of(sgEc2MskCluster).add("name", f"{parameters.project}-{parameters.env}-{parameters.authorName}-{parameters.app}-sgEc2MskCluster")
-        tags.of(sgEc2MskCluster).add("project", parameters.project)
-        tags.of(sgEc2MskCluster).add("env", parameters.env)
-        tags.of(sgEc2MskCluster).add("app", parameters.app)
+        tags.of(sgEc2MskCluster).add("name", f"{parameters_test1.project}-{parameters_test1.env}-{parameters_test1.authorName}-{parameters_test1.app}-sgEc2MskCluster")
+        tags.of(sgEc2MskCluster).add("project", parameters_test1.project)
+        tags.of(sgEc2MskCluster).add("env", parameters_test1.env)
+        tags.of(sgEc2MskCluster).add("app", parameters_test1.app)
 
-        tags.of(sgKafkaProducer).add("name", f"{parameters.project}-{parameters.env}-{parameters.authorName}-{parameters.app}-sgKafkaProducer")
-        tags.of(sgKafkaProducer).add("project", parameters.project)
-        tags.of(sgKafkaProducer).add("env", parameters.env)
-        tags.of(sgKafkaProducer).add("app", parameters.app)
+        tags.of(sgKafkaProducer).add("name", f"{parameters_test1.project}-{parameters_test1.env}-{parameters_test1.authorName}-{parameters_test1.app}-sgKafkaProducer")
+        tags.of(sgKafkaProducer).add("project", parameters_test1.project)
+        tags.of(sgKafkaProducer).add("env", parameters_test1.env)
+        tags.of(sgKafkaProducer).add("app", parameters_test1.app)
 
-        tags.of(sgMskCluster).add("name", f"{parameters.project}-{parameters.env}-{parameters.authorName}-{parameters.app}-sgMskCluster")
-        tags.of(sgMskCluster).add("project", parameters.project)
-        tags.of(sgMskCluster).add("env", parameters.env)
-        tags.of(sgMskCluster).add("app", parameters.app)
+        tags.of(sgMskCluster).add("name", f"{parameters_test1.project}-{parameters_test1.env}-{parameters_test1.authorName}-{parameters_test1.app}-sgMskCluster")
+        tags.of(sgMskCluster).add("project", parameters_test1.project)
+        tags.of(sgMskCluster).add("env", parameters_test1.env)
+        tags.of(sgMskCluster).add("app", parameters_test1.app)
 
         sgEc2MskCluster.add_ingress_rule(ec2.Peer.any_ipv4(), ec2.Port.tcp(22), "Allow SSH access from the internet")
 
         sgMskCluster.add_ingress_rule(
             peer=ec2.Peer.security_group_id(sgEc2MskCluster.security_group_id),
-            connection=ec2.Port.tcp_range(parameters.sgMskClusterInboundPort, parameters.sgMskClusterOutboundPort),
+            connection=ec2.Port.tcp_range(parameters_test1.sgMskClusterInboundPort, parameters_test1.sgMskClusterOutboundPort),
             description="Allow all TCP traffic from sgEc2MskCluster to sgMskCluster"
         )
         sgMskCluster.add_ingress_rule(
             peer=ec2.Peer.security_group_id(sgMskCluster.security_group_id),
-            connection=ec2.Port.tcp_range(parameters.sgMskClusterInboundPort, parameters.sgMskClusterOutboundPort),
+            connection=ec2.Port.tcp_range(parameters_test1.sgMskClusterInboundPort, parameters_test1.sgMskClusterOutboundPort),
             description="Allow all TCP traffic from sgMskCluster to sgMskCluster"
         )
         sgMskCluster.add_ingress_rule(
             peer=ec2.Peer.security_group_id(sgKafkaProducer.security_group_id),
-            connection=ec2.Port.tcp_range(parameters.sgKafkaInboundPort, parameters.sgKafkaOutboundPort),
+            connection=ec2.Port.tcp_range(parameters_test1.sgKafkaInboundPort, parameters_test1.sgKafkaOutboundPort),
             description="Allow TCP traffic on port range (9092 - 9098) from security group sgKafkaProducer to security group sgMskCluster"
         )
 
         sgKafkaProducer.add_ingress_rule(
             peer=ec2.Peer.security_group_id(sgMskCluster.security_group_id),
-            connection=ec2.Port.tcp_range(parameters.sgKafkaInboundPort, parameters.sgKafkaOutboundPort),
+            connection=ec2.Port.tcp_range(parameters_test1.sgKafkaInboundPort, parameters_test1.sgKafkaOutboundPort),
             description="Allow TCP traffic on port range (9092 - 9098) from security group sgMskCluster to security group sgKafkaProducer"
         )
 
-        bucket = s3.Bucket.from_bucket_name(self, "s3BucketAwsBlogArtifacts", parameters.bucket_name)
+        bucket = s3.Bucket.from_bucket_name(self, "s3BucketAwsBlogArtifacts", parameters_test1.bucket_name)
 
         customerManagedKey = kms.Key(self, "customerManagedKey",
-            alias = f"{parameters.project}-{parameters.env}-{parameters.app}-sasl/scram-key",
+            alias = f"{parameters_test1.project}-{parameters_test1.env}-{parameters_test1.app}-sasl/scram-key",
             description = "Customer managed key",
             enable_key_rotation = True
             # removal_policy = logs.RemovalPolicy.DESTROY
         )
-        tags.of(customerManagedKey).add("name", f"{parameters.project}-{parameters.env}-{parameters.authorName}-{parameters.app}-customerManagedKey")
-        tags.of(customerManagedKey).add("project", parameters.project)
-        tags.of(customerManagedKey).add("env", parameters.env)
-        tags.of(customerManagedKey).add("app", parameters.app)
+        tags.of(customerManagedKey).add("name", f"{parameters_test1.project}-{parameters_test1.env}-{parameters_test1.authorName}-{parameters_test1.app}-customerManagedKey")
+        tags.of(customerManagedKey).add("project", parameters_test1.project)
+        tags.of(customerManagedKey).add("env", parameters_test1.env)
+        tags.of(customerManagedKey).add("app", parameters_test1.app)
 
         mskClusterSecrets = secretsmanager.Secret(self, "mskClusterSecrets",
             description = "Secrets for MSK Cluster",
-            secret_name = f"AmazonMSK_/-{parameters.project}-{parameters.env}-{parameters.app}-secret",
+            secret_name = f"AmazonMSK_/-{parameters_test1.project}-{parameters_test1.env}-{parameters_test1.app}-secret",
             generate_secret_string=secretsmanager.SecretStringGenerator(
                 generate_string_key="password",
-                secret_string_template='{"username": "%s"}' % parameters.username,
+                secret_string_template='{"username": "%s"}' % parameters_test1.username,
                 exclude_punctuation = True
             ),
             encryption_key=customerManagedKey
@@ -159,7 +159,7 @@ class dataFeedMskAwsBlogStack(Stack):
         # mskClusterPasswordSecretValueStr = mskClusterPasswordSecretValue.to_string()
 
         mskClusterPwdParamStore = ssm.StringParameter(self, "mskClusterPwdParamStore",
-            parameter_name = f"blogAws-{parameters.env}-mskClusterPwd-ssmParamStore",
+            parameter_name = f"blogAws-{parameters_test1.env}-mskClusterPwd-ssmParamStore",
             string_value = mskClusterPasswordSecretValue,
             tier = ssm.ParameterTier.STANDARD
         )
@@ -224,23 +224,23 @@ zookeeper.session.timeout.ms=18000"""
 #allow.everyone.if.no.acl.found=false
 
         cfn_configuration = msk.CfnConfiguration(self, "mskClusterConfiguration",
-            name=f"{parameters.project}-{parameters.env}-{parameters.app}-mskClusterConfiguration",
+            name=f"{parameters_test1.project}-{parameters_test1.env}-{parameters_test1.app}-mskClusterConfiguration",
             server_properties=server_properties,
             description="MSK cluster configuration"
         )
 
         mskCluster = msk.CfnCluster(
             self, "mskCluster",
-            cluster_name = f"{parameters.project}-{parameters.env}-{parameters.app}-mskCluster",
-            kafka_version = parameters.mskVersion,
-            number_of_broker_nodes = parameters.mskNumberOfBrokerNodes,
+            cluster_name = f"{parameters_test1.project}-{parameters_test1.env}-{parameters_test1.app}-mskCluster",
+            kafka_version = parameters_test1.mskVersion,
+            number_of_broker_nodes = parameters_test1.mskNumberOfBrokerNodes,
             broker_node_group_info = msk.CfnCluster.BrokerNodeGroupInfoProperty(
-                instance_type = parameters.mskClusterInstanceType,
+                instance_type = parameters_test1.mskClusterInstanceType,
                 client_subnets = vpc.select_subnets(subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS).subnet_ids[:2],
                 security_groups = [sgMskCluster.security_group_id],
                 storage_info = msk.CfnCluster.StorageInfoProperty(  
                     ebs_storage_info = msk.CfnCluster.EBSStorageInfoProperty(
-                        volume_size = parameters.mskClusterVolumeSize
+                        volume_size = parameters_test1.mskClusterVolumeSize
                     )
                 ),
                 # connectivity_info = msk.CfnCluster.ConnectivityInfoProperty(
@@ -264,7 +264,7 @@ zookeeper.session.timeout.ms=18000"""
             client_authentication = msk.CfnCluster.ClientAuthenticationProperty(
                 sasl = msk.CfnCluster.SaslProperty(
                     scram = msk.CfnCluster.ScramProperty(
-                        enabled = parameters.mskScramPropertyEnable
+                        enabled = parameters_test1.mskScramPropertyEnable
                     )
                 )
             ),
@@ -274,15 +274,15 @@ zookeeper.session.timeout.ms=18000"""
             },
             encryption_info = msk.CfnCluster.EncryptionInfoProperty(
                 encryption_in_transit = msk.CfnCluster.EncryptionInTransitProperty(
-                    client_broker = parameters.mskEncryptionClientBroker,
-                    in_cluster = parameters.mskEncryptionInClusterEnable
+                    client_broker = parameters_test1.mskEncryptionClientBroker,
+                    in_cluster = parameters_test1.mskEncryptionInClusterEnable
                 )
             )
         )
-        tags.of(mskCluster).add("name", f"{parameters.project}-{parameters.env}-{parameters.authorName}-{parameters.app}-mskCluster")
-        tags.of(mskCluster).add("project", parameters.project)
-        tags.of(mskCluster).add("env", parameters.env)
-        tags.of(mskCluster).add("app", parameters.app)
+        tags.of(mskCluster).add("name", f"{parameters_test1.project}-{parameters_test1.env}-{parameters_test1.authorName}-{parameters_test1.app}-mskCluster")
+        tags.of(mskCluster).add("project", parameters_test1.project)
+        tags.of(mskCluster).add("env", parameters_test1.env)
+        tags.of(mskCluster).add("app", parameters_test1.app)
 #################################################### 2nd Cluster Thing Start ####################################################
         # kafkaClientEc2BlockDevices2 = ec2.BlockDevice(device_name="/dev/xvda", volume=ec2.BlockDeviceVolume.ebs(10))
         # kafkaClientEC2Instance2 = ec2.Instance(self, "kafkaClientEC2Instance2",
@@ -432,7 +432,7 @@ zookeeper.session.timeout.ms=18000"""
         )
 
         mskClusterArnParamStore = ssm.StringParameter(self, "mskClusterArnParamStore",
-            parameter_name = f"blogAws-{parameters.env}-mskClusterArn-ssmParamStore",
+            parameter_name = f"blogAws-{parameters_test1.env}-mskClusterArn-ssmParamStore",
             string_value = mskCluster.attr_arn,
             tier = ssm.ParameterTier.STANDARD
         )
@@ -450,7 +450,7 @@ zookeeper.session.timeout.ms=18000"""
         # tags.of(mskClusterVpcConnection).add("env", parameters.env)
         # tags.of(mskClusterVpcConnection).add("app", parameters.app)
 
-        cross_account_id = parameters.crossAccountId
+        cross_account_id = parameters_test1.crossAccountId
         
         # mskClusterPolicy = msk.CfnClusterPolicy(self, "mskClusterPolicy",
         #     cluster_arn=mskClusterArnParamStoreValue,
@@ -475,13 +475,13 @@ zookeeper.session.timeout.ms=18000"""
         # )
 
         ec2MskClusterRole = iam.Role(self, "ec2MskClusterRole",
-            role_name = f"{parameters.project}-{parameters.env}-{parameters.app}-ec2MskClusterRole",
+            role_name = f"{parameters_test1.project}-{parameters_test1.env}-{parameters_test1.app}-ec2MskClusterRole",
             assumed_by=iam.ServicePrincipal("ec2.amazonaws.com")
         )
-        tags.of(ec2MskClusterRole).add("name", f"{parameters.project}-{parameters.env}-{parameters.authorName}-{parameters.app}-ec2MskClusterRole")
-        tags.of(ec2MskClusterRole).add("project", parameters.project)
-        tags.of(ec2MskClusterRole).add("env", parameters.env)
-        tags.of(ec2MskClusterRole).add("app", parameters.app)
+        tags.of(ec2MskClusterRole).add("name", f"{parameters_test1.project}-{parameters_test1.env}-{parameters_test1.authorName}-{parameters_test1.app}-ec2MskClusterRole")
+        tags.of(ec2MskClusterRole).add("project", parameters_test1.project)
+        tags.of(ec2MskClusterRole).add("env", parameters_test1.env)
+        tags.of(ec2MskClusterRole).add("app", parameters_test1.app)
         
         ec2MskClusterRole.attach_inline_policy(
             iam.Policy(self, 'ec2MskClusterPolicy',
@@ -504,8 +504,8 @@ zookeeper.session.timeout.ms=18000"""
                             "kafka:GetBootstrapBrokers"
                         ],
                         resources= [mskCluster.attr_arn,
-                                    f"arn:aws:kafka:{parameters.region}:{parameters.accountId}:topic/{mskCluster.cluster_name}/*/*",
-                                    f"arn:aws:kafka:{parameters.region}:{parameters.accountId}:group/{mskCluster.cluster_name}/*/*"
+                                    f"arn:aws:kafka:{parameters_test1.region}:{parameters_test1.accountId}:topic/{mskCluster.cluster_name}/*/*",
+                                    f"arn:aws:kafka:{parameters_test1.region}:{parameters_test1.accountId}:group/{mskCluster.cluster_name}/*/*"
                         ]
                     ),
                     iam.PolicyStatement(
@@ -528,9 +528,9 @@ zookeeper.session.timeout.ms=18000"""
                             # "ec2:AssignPrivateIpAddresses",
                             # "ec2:UnassignPrivateIpAddresses"
                         ],
-                        resources= [f"arn:aws:ec2:{parameters.region}:{parameters.accountId}:instance/*",
-                                    f"arn:aws:ec2:{parameters.region}:{parameters.accountId}:volume/*",
-                                    f"arn:aws:ec2:{parameters.region}:{parameters.accountId}:security-group/*"
+                        resources= [f"arn:aws:ec2:{parameters_test1.region}:{parameters_test1.accountId}:instance/*",
+                                    f"arn:aws:ec2:{parameters_test1.region}:{parameters_test1.accountId}:volume/*",
+                                    f"arn:aws:ec2:{parameters_test1.region}:{parameters_test1.accountId}:security-group/*"
                         ]
                     ),
                     iam.PolicyStatement(
@@ -547,8 +547,8 @@ zookeeper.session.timeout.ms=18000"""
                             "logs:CreateLogStream",
                             "logs:PutLogEvents",
                         ],
-                        resources= [f"arn:aws:logs:{parameters.region}:{parameters.accountId}:log-group:okok:log-stream:*",
-                                    f"arn:aws:logs:{parameters.region}:{parameters.accountId}:log-group:*"
+                        resources= [f"arn:aws:logs:{parameters_test1.region}:{parameters_test1.accountId}:log-group:okok:log-stream:*",
+                                    f"arn:aws:logs:{parameters_test1.region}:{parameters_test1.accountId}:log-group:*"
                         ]
                     ),
                     iam.PolicyStatement(
@@ -557,8 +557,8 @@ zookeeper.session.timeout.ms=18000"""
                             "s3:GetObject",
                             "s3:PutObject"
                         ],
-                        resources= [f"arn:aws:s3:::{parameters.sourceBucketName}",
-                                    f"arn:aws:s3:::{parameters.sourceBucketName}/*"
+                        resources= [f"arn:aws:s3:::{parameters_test1.sourceBucketName}",
+                                    f"arn:aws:s3:::{parameters_test1.sourceBucketName}/*"
                         ]
                     )
                 ]
@@ -567,9 +567,9 @@ zookeeper.session.timeout.ms=18000"""
 
         kafkaClientEc2BlockDevices = ec2.BlockDevice(device_name="/dev/xvda", volume=ec2.BlockDeviceVolume.ebs(10))
         kafkaClientEC2Instance = ec2.Instance(self, "kafkaClientEC2Instance",
-            instance_name = f"{parameters.project}-{parameters.env}-{parameters.app}-kafkaClientEC2Instance",
+            instance_name = f"{parameters_test1.project}-{parameters_test1.env}-{parameters_test1.app}-kafkaClientEC2Instance",
             vpc = vpc,
-            instance_type = ec2.InstanceType.of(ec2.InstanceClass(parameters.instanceClass), ec2.InstanceSize(parameters.instanceSize)),
+            instance_type = ec2.InstanceType.of(ec2.InstanceClass(parameters_test1.instanceClass), ec2.InstanceSize(parameters_test1.instanceSize)),
             machine_image = ec2.AmazonLinuxImage(generation=ec2.AmazonLinuxGeneration.AMAZON_LINUX_2), #ec2.MachineImage().lookup(name = parameters.amiName),
             availability_zone = vpc.availability_zones[1],
             block_devices = [kafkaClientEc2BlockDevices],
@@ -593,12 +593,12 @@ zookeeper.session.timeout.ms=18000"""
             "cat <<EOF > /home/ec2-user/users_jaas.conf",
             "KafkaClient {",
             f"    org.apache.kafka.common.security.scram.ScramLoginModule required",
-            f'    username="{parameters.username}"',
+            f'    username="{parameters_test1.username}"',
             f'    password="{mskClusterPwdParamStoreValue}";',
             "};",
             "EOF",
             "export KAFKA_OPTS=-Djava.security.auth.login.config=/home/ec2-user/users_jaas.conf",
-            f"export BOOTSTRAP_SERVERS=$(aws kafka get-bootstrap-brokers --cluster-arn {mskCluster.attr_arn} --region {parameters.region} | jq -r \'.BootstrapBrokerStringSaslScram\')",
+            f"export BOOTSTRAP_SERVERS=$(aws kafka get-bootstrap-brokers --cluster-arn {mskCluster.attr_arn} --region {parameters_test1.region} | jq -r \'.BootstrapBrokerStringSaslScram\')",
             "mkdir tmp",
             "cp /usr/lib/jvm/java-11-amazon-corretto.x86_64/lib/security/cacerts /home/ec2-user/tmp/kafka.client.truststore.jks",
             "cat <<EOF > /home/ec2-user/client_sasl.properties",
@@ -606,8 +606,8 @@ zookeeper.session.timeout.ms=18000"""
             f"sasl.mechanism=SCRAM-SHA-512",
             f"ssl.truststore.location=/home/ec2-user/tmp/kafka.client.truststore.jks",
             "EOF",
-            f'/kafka_2.13-3.5.1/bin/kafka-topics.sh --bootstrap-server $BOOTSTRAP_SERVERS --command-config /home/ec2-user/client_sasl.properties --create --topic {parameters.topicName1} --replication-factor 2',
-            f'/kafka_2.13-3.5.1/bin/kafka-topics.sh --bootstrap-server $BOOTSTRAP_SERVERS --command-config /home/ec2-user/client_sasl.properties --create --topic {parameters.topicName2} --replication-factor 2',
+            f'/kafka_2.13-3.5.1/bin/kafka-topics.sh --bootstrap-server $BOOTSTRAP_SERVERS --command-config /home/ec2-user/client_sasl.properties --create --topic {parameters_test1.topicName1} --replication-factor 2',
+            f'/kafka_2.13-3.5.1/bin/kafka-topics.sh --bootstrap-server $BOOTSTRAP_SERVERS --command-config /home/ec2-user/client_sasl.properties --create --topic {parameters_test1.topicName2} --replication-factor 2',
             f'/kafka_2.13-3.5.1/bin/kafka-topics.sh --bootstrap-server $BOOTSTRAP_SERVERS --list --command-config ./client_sasl.properties',  
             "cd /home/ec2-user",
             "sudo yum update -y",
@@ -619,14 +619,14 @@ zookeeper.session.timeout.ms=18000"""
             "sudo pip3 install virtualenv",
             "sudo python3 -m virtualenv alpaca-script",
             "source alpaca-script/bin/activate",
-            f"pip install -r <(aws s3 cp s3://{parameters.sourceBucketName}/python-scripts/requirement.txt -)",
-            f"aws s3 cp s3://{parameters.sourceBucketName}/python-scripts/ec2-script-historic.py .",
-            f"aws s3 cp s3://{parameters.sourceBucketName}/python-scripts/stock_mapper.py .",
+            f"pip install -r <(aws s3 cp s3://{parameters_test1.sourceBucketName}/python-scripts/requirement.txt -)",
+            f"aws s3 cp s3://{parameters_test1.sourceBucketName}/python-scripts/ec2-script-historic.py .",
+            f"aws s3 cp s3://{parameters_test1.sourceBucketName}/python-scripts/stock_mapper.py .",
             'export API_KEY=PKPBAXYRYGBBDNGOBYV9',
             'export SECRET_KEY=FC4vp8HUkno88tttRMYpONbOBTmcY9lcFXqc5msa',
             'export BOOTSTRAP_SERVERS=\"$broker_url\"',
             'export KAFKA_SASL_MECHANISM=SCRAM-SHA-512',
-            f'export KAFKA_SASL_USERNAME={parameters.username}',
+            f'export KAFKA_SASL_USERNAME={parameters_test1.username}',
             f'export KAFKA_SASL_PASSWORD={mskClusterPwdParamStoreValue}',
             "python3 ec2-script-historic.py"
         )
@@ -707,7 +707,7 @@ zookeeper.session.timeout.ms=18000"""
 
         openSearchSecrets = secretsmanager.Secret(self, "openSearchSecrets",
             description = "Secrets for OpenSearch",
-            secret_name = f"{parameters.project}-{parameters.env}-{parameters.app}-openSearchSecrets",
+            secret_name = f"{parameters_test1.project}-{parameters_test1.env}-{parameters_test1.app}-openSearchSecrets",
             generate_secret_string = secretsmanager.SecretStringGenerator(),
             encryption_key=customerManagedKey
         )
@@ -716,29 +716,29 @@ zookeeper.session.timeout.ms=18000"""
         openSearchMasterPasswordSecretValueStr = openSearchMasterPasswordSecretValue.to_string()
         openSearchMaster = openSearchMasterPasswordSecretValue.unsafe_unwrap()
 
-        OPENSEARCH_VERSION = parameters.openSearchVersion
+        OPENSEARCH_VERSION = parameters_test1.openSearchVersion
         openSearchDomain = opensearch.Domain(self, "openSearchDomain",
-            domain_name = f"awsblog-{parameters.env}-public-domain",
+            domain_name = f"awsblog-{parameters_test1.env}-public-domain",
             version = opensearch.EngineVersion.open_search(OPENSEARCH_VERSION),
             capacity = opensearch.CapacityConfig(
-                multi_az_with_standby_enabled = parameters.multiAzWithStandByEnabled,
-                master_nodes = parameters.no_of_master_nodes,
-                master_node_instance_type = parameters.master_node_instance_type,
-                data_nodes = parameters.no_of_data_nodes,
-                data_node_instance_type = parameters.data_node_instance_type
+                multi_az_with_standby_enabled = parameters_test1.multiAzWithStandByEnabled,
+                master_nodes = parameters_test1.no_of_master_nodes,
+                master_node_instance_type = parameters_test1.master_node_instance_type,
+                data_nodes = parameters_test1.no_of_data_nodes,
+                data_node_instance_type = parameters_test1.data_node_instance_type
             ),
             ebs = opensearch.EbsOptions(
-                volume_size = parameters.openSearchVolumeSize,
+                volume_size = parameters_test1.openSearchVolumeSize,
                 volume_type = ec2.EbsDeviceVolumeType.GP3
             ),
             access_policies = [opensearch_access_policy],
-            enforce_https = parameters.openSearchEnableHttps,                      # Required when FGAC is enabled
-            node_to_node_encryption = parameters.openSearchNodeToNodeEncryption,   # Required when FGAC is enabled
+            enforce_https = parameters_test1.openSearchEnableHttps,                      # Required when FGAC is enabled
+            node_to_node_encryption = parameters_test1.openSearchNodeToNodeEncryption,   # Required when FGAC is enabled
             encryption_at_rest = opensearch.EncryptionAtRestOptions(
-                enabled = parameters.openSearchEncryptionAtRest
+                enabled = parameters_test1.openSearchEncryptionAtRest
             ),
             fine_grained_access_control = opensearch.AdvancedSecurityOptions(
-                master_user_name = parameters.openSearchMasterUsername,
+                master_user_name = parameters_test1.openSearchMasterUsername,
                 master_user_password = openSearchMasterPasswordSecretValue
             )
         )
@@ -747,22 +747,22 @@ zookeeper.session.timeout.ms=18000"""
         # openSearchDomainEndpointStr = openSearchDomainEndpoint
 
         flinkAppLogGroup = logs.LogGroup(self, "apacheFlinkAppLogGroup",
-            log_group_name = f"{parameters.project}-{parameters.env}-{parameters.app}-flinkAppLogGroup",
+            log_group_name = f"{parameters_test1.project}-{parameters_test1.env}-{parameters_test1.app}-flinkAppLogGroup",
             retention = logs.RetentionDays.ONE_WEEK
             # removal_policy = logs.LogGroup.RemovalPolicy.DESTROY
         )
 
         apacheFlinkAppRole = iam.Role(self, "apacheFlinkAppRole",
-            role_name = f"{parameters.project}-{parameters.env}-{parameters.app}-apacheFlinkAppRole",
+            role_name = f"{parameters_test1.project}-{parameters_test1.env}-{parameters_test1.app}-apacheFlinkAppRole",
             assumed_by=iam.ServicePrincipal("kinesisanalytics.amazonaws.com"),
             managed_policies = [
                 iam.ManagedPolicy.from_aws_managed_policy_name("AmazonMSKReadOnlyAccess")
             ]
         )
-        tags.of(ec2MskClusterRole).add("name", f"{parameters.project}-{parameters.env}-{parameters.authorName}-{parameters.app}-apacheFlinkAppRole")
-        tags.of(ec2MskClusterRole).add("project", parameters.project)
-        tags.of(ec2MskClusterRole).add("env", parameters.env)
-        tags.of(ec2MskClusterRole).add("app", parameters.app)
+        tags.of(ec2MskClusterRole).add("name", f"{parameters_test1.project}-{parameters_test1.env}-{parameters_test1.authorName}-{parameters_test1.app}-apacheFlinkAppRole")
+        tags.of(ec2MskClusterRole).add("project", parameters_test1.project)
+        tags.of(ec2MskClusterRole).add("env", parameters_test1.env)
+        tags.of(ec2MskClusterRole).add("app", parameters_test1.app)
 
         apacheFlinkAppRole.attach_inline_policy(
             iam.Policy(self, 'apacheFlinkAppPolicy',
@@ -773,7 +773,7 @@ zookeeper.session.timeout.ms=18000"""
                             "s3:GetObject",
                             "s3:GetObjectVersion"
                         ],
-                        resources = [f"{bucket.bucket_arn}/{parameters.apacheFlinkBucketKey}"]
+                        resources = [f"{bucket.bucket_arn}/{parameters_test1.apacheFlinkBucketKey}"]
                     ),
                     iam.PolicyStatement(
                         effect = iam.Effect.ALLOW,
@@ -800,9 +800,9 @@ zookeeper.session.timeout.ms=18000"""
                             "ec2:DescribeNetworkInterfaces",
                             "ec2:DeleteNetworkInterface"
                         ],
-                        resources = [f"arn:aws:ec2:{parameters.region}:{parameters.accountId}:network-interface/*",
-                                     f"arn:aws:ec2:{parameters.region}:{parameters.accountId}:security-group/*",
-                                     f"arn:aws:ec2:{parameters.region}:{parameters.accountId}:subnet/*"
+                        resources = [f"arn:aws:ec2:{parameters_test1.region}:{parameters_test1.accountId}:network-interface/*",
+                                     f"arn:aws:ec2:{parameters_test1.region}:{parameters_test1.accountId}:security-group/*",
+                                     f"arn:aws:ec2:{parameters_test1.region}:{parameters_test1.accountId}:subnet/*"
                         ]
                     )
                 ]
@@ -810,76 +810,76 @@ zookeeper.session.timeout.ms=18000"""
         )
 
         apacheFlinkApp = flink.Application(self, "apacheFlinkApp",
-            code = flink.ApplicationCode.from_bucket(bucket = bucket,file_key = parameters.apacheFlinkBucketKey),
+            code = flink.ApplicationCode.from_bucket(bucket = bucket,file_key = parameters_test1.apacheFlinkBucketKey),
             runtime = flink.Runtime.FLINK_1_11, #(parameters.flinkRuntimeVersion),
-            application_name = f"{parameters.project}-{parameters.env}-{parameters.app}-apacheFlinkApp",
+            application_name = f"{parameters_test1.project}-{parameters_test1.env}-{parameters_test1.app}-apacheFlinkApp",
             vpc = vpc,
             vpc_subnets = ec2.SubnetSelection(subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS),
-            auto_scaling_enabled = parameters.apacheFlinkAutoScalingEnable,
+            auto_scaling_enabled = parameters_test1.apacheFlinkAutoScalingEnable,
             property_groups = {
                 "FlinkApplicationProperties": {
-                    "msk.username" : parameters.username,
+                    "msk.username" : parameters_test1.username,
                     "msk.password" : mskClusterPasswordSecretValue, 
                     "opensearch.endpoint" : openSearchDomainEndpoint,
-                    "opensearch.username" : parameters.openSearchMasterUsername,
+                    "opensearch.username" : parameters_test1.openSearchMasterUsername,
                     "opensearch.password" : openSearchMaster, #openSearchMasterPasswordSecretValueStr,
-                    "opensearch.port" : parameters.openSearchPort,
-                    "event.ticker.interval.minutes" : parameters.eventTickerIntervalMinutes,
-                    "event.ticker.1" : parameters.topicName1,
-                    "event.ticker.2" : parameters.topicName2
+                    "opensearch.port" : parameters_test1.openSearchPort,
+                    "event.ticker.interval.minutes" : parameters_test1.eventTickerIntervalMinutes,
+                    "event.ticker.1" : parameters_test1.topicName1,
+                    "event.ticker.2" : parameters_test1.topicName2
                 }
             },
             role = apacheFlinkAppRole,
-            parallelism = parameters.apacheFlinkParallelism,
-            parallelism_per_kpu = parameters.apacheFlinkParallelismPerKpu,
-            checkpointing_enabled = parameters.apacheFlinkCheckpointingEnabled,
+            parallelism = parameters_test1.apacheFlinkParallelism,
+            parallelism_per_kpu = parameters_test1.apacheFlinkParallelismPerKpu,
+            checkpointing_enabled = parameters_test1.apacheFlinkCheckpointingEnabled,
             log_group = flinkAppLogGroup
         )
-        tags.of(ec2MskClusterRole).add("name", f"{parameters.project}-{parameters.env}-{parameters.authorName}-{parameters.app}-apacheFlinkApp")
-        tags.of(ec2MskClusterRole).add("project", parameters.project)
-        tags.of(ec2MskClusterRole).add("env", parameters.env)
-        tags.of(ec2MskClusterRole).add("app", parameters.app)
+        tags.of(ec2MskClusterRole).add("name", f"{parameters_test1.project}-{parameters_test1.env}-{parameters_test1.authorName}-{parameters_test1.app}-apacheFlinkApp")
+        tags.of(ec2MskClusterRole).add("project", parameters_test1.project)
+        tags.of(ec2MskClusterRole).add("env", parameters_test1.env)
+        tags.of(ec2MskClusterRole).add("app", parameters_test1.app)
 
 ### OUTPUTS ###
         CfnOutput(self, "vpcId",
             value = vpc.vpc_id,
             description = "VPC Id",
-            export_name = f"{parameters.project}-{parameters.env}-{parameters.app}-vpcId"
+            export_name = f"{parameters_test1.project}-{parameters_test1.env}-{parameters_test1.app}-vpcId"
         )
         CfnOutput(self, "sgEc2MskClusterId",
             value=sgEc2MskCluster.security_group_id,
             description = "Security group Id of EC2 MSK cluster",
-            export_name = f"{parameters.project}-{parameters.env}-{parameters.app}-sgEc2MskClusterId"
+            export_name = f"{parameters_test1.project}-{parameters_test1.env}-{parameters_test1.app}-sgEc2MskClusterId"
         )
         CfnOutput(self, "sgKafkaProducerId",
             value=sgKafkaProducer.security_group_id,
             description = "Security group Id of EC2 kafka producer",
-            export_name = f"{parameters.project}-{parameters.env}-{parameters.app}-sgKafkaProducerId"
+            export_name = f"{parameters_test1.project}-{parameters_test1.env}-{parameters_test1.app}-sgKafkaProducerId"
         )
         CfnOutput(self, "sgMskClusterId",
             value=sgMskCluster.security_group_id,
             description = "Security group Id of MSK Cluster",
-            export_name = f"{parameters.project}-{parameters.env}-{parameters.app}-sgMskClusterId"
+            export_name = f"{parameters_test1.project}-{parameters_test1.env}-{parameters_test1.app}-sgMskClusterId"
         )
         CfnOutput(self, "ec2MskClusterRoleArn",
             value=ec2MskClusterRole.role_arn,
             description = "ARN of EC2 MSK cluster role",
-            export_name = f"{parameters.project}-{parameters.env}-{parameters.app}-ec2MskClusterRoleArn"
+            export_name = f"{parameters_test1.project}-{parameters_test1.env}-{parameters_test1.app}-ec2MskClusterRoleArn"
         )
         CfnOutput(self, "mskClusterName",
             value=mskCluster.cluster_name,
             description = "Name of an MSK cluster",
-            export_name = f"{parameters.project}-{parameters.env}-{parameters.app}-mskClusterName"
+            export_name = f"{parameters_test1.project}-{parameters_test1.env}-{parameters_test1.app}-mskClusterName"
         )
         CfnOutput(self, "mskClusterArn",
             value=mskCluster.attr_arn,
             description = "ARN of an MSK cluster",
-            export_name = f"{parameters.project}-{parameters.env}-{parameters.app}-mskClusterArn"
+            export_name = f"{parameters_test1.project}-{parameters_test1.env}-{parameters_test1.app}-mskClusterArn"
         )
         CfnOutput(self, "apacheFlinkAppRoleArn",
             value=apacheFlinkAppRole.role_arn,
             description = "ARN of apache flink app role",
-            export_name = f"{parameters.project}-{parameters.env}-{parameters.app}-apacheFlinkAppRoleArn"
+            export_name = f"{parameters_test1.project}-{parameters_test1.env}-{parameters_test1.app}-apacheFlinkAppRoleArn"
         )
         # CfnOutput(self, "kafkaProducerEC2InstanceId",
         #     value=kafkaProducerEC2Instance.instance_id,
@@ -894,60 +894,60 @@ zookeeper.session.timeout.ms=18000"""
         CfnOutput(self, "customerManagedKeyArn",
             value=customerManagedKey.key_arn,
             description = "ARN of customer managed key",
-            export_name = f"{parameters.project}-{parameters.env}-{parameters.app}-customerManagedKeyArn"
+            export_name = f"{parameters_test1.project}-{parameters_test1.env}-{parameters_test1.app}-customerManagedKeyArn"
         )
         CfnOutput(self, "mskClusterSecretsArn",
             value=mskClusterSecrets.secret_arn,
             description = "ARN of MSK cluster secrets",
-            export_name = f"{parameters.project}-{parameters.env}-{parameters.app}-mskClusterSecretsArn"
+            export_name = f"{parameters_test1.project}-{parameters_test1.env}-{parameters_test1.app}-mskClusterSecretsArn"
         )
         CfnOutput(self, "mskClusterSecretsName",
             value=mskClusterSecrets.secret_name,
             description = "MSK cluster secrets name",
-            export_name = f"{parameters.project}-{parameters.env}-{parameters.app}-mskClusterSecretsName"
+            export_name = f"{parameters_test1.project}-{parameters_test1.env}-{parameters_test1.app}-mskClusterSecretsName"
         )
         CfnOutput(self, "flinkAppLogGroupArn",
             value = flinkAppLogGroup.log_group_arn,
             description = "Arn of an Apache Flink log group",
-            export_name = f"{parameters.project}-{parameters.env}-{parameters.app}-flinkAppLogGroupArn"
+            export_name = f"{parameters_test1.project}-{parameters_test1.env}-{parameters_test1.app}-flinkAppLogGroupArn"
         )
         CfnOutput(self, "flinkAppLogGroupName",
             value = flinkAppLogGroup.log_group_name,
             description = "Name of an Apache Flink log group",
-            export_name = f"{parameters.project}-{parameters.env}-{parameters.app}-flinkAppLogGroupName"
+            export_name = f"{parameters_test1.project}-{parameters_test1.env}-{parameters_test1.app}-flinkAppLogGroupName"
         )
         CfnOutput(self, "apacheFlinkAppArn",
             value = apacheFlinkApp.application_arn,
             description = "Arn of an Apache Flink application",
-            export_name = f"{parameters.project}-{parameters.env}-{parameters.app}-apacheFlinkAppArn"
+            export_name = f"{parameters_test1.project}-{parameters_test1.env}-{parameters_test1.app}-apacheFlinkAppArn"
         )
         CfnOutput(self, "apacheFlinkAppName",
             value = apacheFlinkApp.application_name,
             description = "Name of an Apache Flink application",
-            export_name = f"{parameters.project}-{parameters.env}-{parameters.app}-apacheFlinkAppName"
+            export_name = f"{parameters_test1.project}-{parameters_test1.env}-{parameters_test1.app}-apacheFlinkAppName"
         )
         CfnOutput(self, "openSearchSecretsArn",
             value=openSearchSecrets.secret_arn,
             description = "ARN of MSK cluster secrets",
-            export_name = f"{parameters.project}-{parameters.env}-{parameters.app}-openSearchSecretsArn"
+            export_name = f"{parameters_test1.project}-{parameters_test1.env}-{parameters_test1.app}-openSearchSecretsArn"
         )
         CfnOutput(self, "openSearchSecretsName",
             value=openSearchSecrets.secret_name,
             description = "MSK cluster secrets name",
-            export_name = f"{parameters.project}-{parameters.env}-{parameters.app}-openSearchSecretsName"
+            export_name = f"{parameters_test1.project}-{parameters_test1.env}-{parameters_test1.app}-openSearchSecretsName"
         )
         CfnOutput(self, "openSearchDomainName",
             value=openSearchDomain.domain_name,
             description = "OpenSearch domain name",
-            export_name = f"{parameters.project}-{parameters.env}-{parameters.app}-openSearchDomainName"
+            export_name = f"{parameters_test1.project}-{parameters_test1.env}-{parameters_test1.app}-openSearchDomainName"
         )
         CfnOutput(self, "openSearchDomainEndpoint",
             value=openSearchDomain.domain_endpoint,
             description = "OpenSearch domain endpoint",
-            export_name = f"{parameters.project}-{parameters.env}-{parameters.app}-openSearchDomainEndpoint"
+            export_name = f"{parameters_test1.project}-{parameters_test1.env}-{parameters_test1.app}-openSearchDomainEndpoint"
         )
         CfnOutput(self, "mskClusterPwdParamStoreValue",
             value=mskClusterPwdParamStore.string_value,
             description = "MSK cluster parameter store value",
-            export_name = f"{parameters.project}-{parameters.env}-{parameters.app}-mskClusterPwdParamStoreValue"
+            export_name = f"{parameters_test1.project}-{parameters_test1.env}-{parameters_test1.app}-mskClusterPwdParamStoreValue"
         )

@@ -17,49 +17,43 @@ from aws_cdk import (
     aws_opensearchservice as opensearch,
     aws_kinesisanalytics_flink_alpha as flink
 )
-# const accountId = cdk.Aws.ACCOUNT_ID;
-# const region = cdk.Aws.REGION;
-# from aws_cdk import core
 from . import parameters
-import json
-import os.path
 
-app_region = os.environ["CDK_DEFAULT_REGION"]
 
-class dataFeedMskCrossAccountConfig(Stack):
+class dataFeedMskCrossAccount(Stack):
 
     def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
 
+        #############       VPC Configurations      #############
+
         availabilityZonesList = [parameters.az1, parameters.az2]
         vpc = ec2.Vpc (self, "vpc",
-            ip_addresses = ec2.IpAddresses.cidr(parameters.cidr_range),
-            enable_dns_hostnames = parameters.enable_dns_hostnames,
-            enable_dns_support = parameters.enable_dns_support,
+            vpc_name = f"{parameters.project}-{parameters.env}-{parameters.app}-vpc",
+            ip_addresses = ec2.IpAddresses.cidr(parameters.cidrRange),
+            enable_dns_hostnames = parameters.enableDnsHostnames,
+            enable_dns_support = parameters.enableDnsSupport,
             availability_zones = availabilityZonesList,
-            nat_gateways = parameters.no_of_nat_gateways,
+            nat_gateways = parameters.numberOfNatGateways,
             subnet_configuration = [
                 {
-                    "name": f"{parameters.project}-{parameters.env}-{parameters.authorName}-{parameters.app}-publicSubnet1",
+                    "name": f"{parameters.project}-{parameters.env}-{parameters.app}-publicSubnet1",
                     "subnetType": ec2.SubnetType.PUBLIC,
                     "cidrMask": parameters.cidrMaskForSubnets,
                 },
                 {
-                    "name": f"{parameters.project}-{parameters.env}-{parameters.authorName}-{parameters.app}-privateSubnet1",
+                    "name": f"{parameters.project}-{parameters.env}-{parameters.app}-privateSubnet1",
                     "subnetType": ec2.SubnetType.PRIVATE_WITH_EGRESS,
                     "cidrMask": parameters.cidrMaskForSubnets,
-                },
-                {
-                    "name": f"{parameters.project}-{parameters.env}-{parameters.authorName}-{parameters.app}-isolatedSubnet-1",
-                    "subnetType": ec2.SubnetType.PRIVATE_ISOLATED,
-                    "cidrMask": parameters.cidrMaskForSubnets,
-                },
+                }
             ]
         )
-        tags.of(vpc).add("name", f"{parameters.project}-{parameters.env}-{parameters.authorName}-{parameters.app}-vpc")
+        tags.of(vpc).add("name", f"{parameters.project}-{parameters.env}-{parameters.app}-vpc")
         tags.of(vpc).add("project", parameters.project)
         tags.of(vpc).add("env", parameters.env)
         tags.of(vpc).add("app", parameters.app)
+
+#############       EC2 Key Pair Configurations      #############
 
         keyPair = ec2.KeyPair.from_key_pair_name(self, "ec2KeyPair", parameters.keyPairName)
 

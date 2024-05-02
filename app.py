@@ -1,18 +1,18 @@
 
 
 import aws_cdk as cdk
-
-from cdk.cdk_stack import dataFeedMskAwsBlogStack
-from cdk.cross_account import dataFeedMskCrossAccountConfig
+from aws_cdk import Aws
+from cdk.dataFeedMsk import dataFeedMsk
+# from cdk.dataFeedMskCrossAccount import dataFeedMskCrossAccount
 from cdk import parameters
 
 app = cdk.App()
 
-env = cdk.Environment(region="us-east-1",account="095773313313")
-# crossAccountEnv = cdk.Environment(region="us-east-1",account="007756798683")
+aws_env = cdk.Environment(region="us-east-1",account="095773313313")
+# cross_account_aws_env = cdk.Environment(region="us-east-1",account="007756798683")
 
-dataFeedMskAwsBlogStack(app, f"{parameters.project}-{parameters.env}-{parameters.app}-dataFeedMskAwsBlogStack", env=env)
+dataFeedMsk(app, f"{parameters.project}-{parameters.env}-{parameters.app}-dataFeedMskAwsBlogStack", env=aws_env)
 
-# dataFeedMskCrossAccountConfig(app, f"{parameters.project}-{parameters.env}-{parameters.app}-dataFeedMskCrossAccountConfig", env=crossAccountEnv)
+# dataFeedMskCrossAccount(app, f"{parameters.project}-{parameters.env}-{parameters.app}-dataFeedMskCrossAccount", env=cross_account_aws_env)
 
 app.synth()

@@ -1,6 +1,7 @@
 project = "awsblog"
 env = "qa"
 app = "app"
+authorName = "uzair"
 cidr_range = "10.20.0.0/16"
 no_of_nat_gateways = 3
 enable_dns_hostnames = True
@@ -25,15 +26,15 @@ mskClusterVolumeSize = 100
 mskScramPropertyEnable = True
 mskEncryptionClientBroker = "TLS"
 mskEncryptionInClusterEnable = True
-topicName1 = "googl"
-topicName2 = "tesl"
+topicName1 = "amzn"
+topicName2 = "appl"
 topicName3 = "sams"
 crossAccountId = "007756798683"
 
 # Kafka Client EC2 instance Parameters
 
 instanceClass = "BURSTABLE2"
-instanceSize = "LARGE"
+instanceSize = "SMALL"
 keyPairName = "awsBlog-dev-app-us-east-1"
 amiName = "ubuntu/images/hvm-ssd/ubuntu-jammy-22.04-amd64-server-20220420"
 accountId = "095773313313"
