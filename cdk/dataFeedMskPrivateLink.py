@@ -25,6 +25,8 @@ class dataFeedMskCrossAccount(Stack):
     def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
 
+        
+        
         mskClusterConfigProperties = [
             "auto.create.topics.enable=false",
             "default.replication.factor=3",
