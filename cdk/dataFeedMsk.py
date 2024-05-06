@@ -2,6 +2,7 @@ from constructs import Construct
 from aws_cdk import (
     Stack,
     CfnOutput,
+    RemovalPolicy,
     aws_ec2 as ec2,
     aws_iam as iam,
     aws_s3 as s3,
@@ -13,7 +14,7 @@ from aws_cdk import (
     aws_logs as logs,
     Tags as tags,
     aws_opensearchservice as opensearch,
-    aws_kinesisanalytics_flink_alpha as flink,
+    aws_kinesisanalyticsv2 as kinesisanalyticsv2,
     Aws as AWS
 )
 from . import parameters
@@ -69,18 +70,6 @@ class dataFeedMsk(Stack):
         tags.of(sgEc2MskCluster).add("env", parameters.env)
         tags.of(sgEc2MskCluster).add("app", parameters.app)
 
-        sgKafkaProducer = ec2.SecurityGroup(self, "sgKafkaProducer",
-            security_group_name = f"{parameters.project}-{parameters.env}-{parameters.app}-sgKafkaProducer",
-            vpc=vpc,
-            description="Security group associated with the Lambda Function",
-            allow_all_outbound=True,
-            disable_inline_rules=True
-        )
-        tags.of(sgKafkaProducer).add("name", f"{parameters.project}-{parameters.env}-{parameters.app}-sgKafkaProducer")
-        tags.of(sgKafkaProducer).add("project", parameters.project)
-        tags.of(sgKafkaProducer).add("env", parameters.env)
-        tags.of(sgKafkaProducer).add("app", parameters.app)
-
         sgMskCluster = ec2.SecurityGroup(self, "sgMskCluster",
             security_group_name = f"{parameters.project}-{parameters.env}-{parameters.app}-sgMskCluster",
             vpc=vpc,
@@ -128,21 +117,6 @@ class dataFeedMsk(Stack):
             description = "Allow all TCP traffic from sgMskCluster to sgMskCluster"
         )
         sgMskCluster.add_ingress_rule(
-            peer = ec2.Peer.security_group_id(sgKafkaProducer.security_group_id),
-            connection = ec2.Port.tcp_range(parameters.sgKafkaInboundPort, parameters.sgKafkaOutboundPort),
-            description = "Allow TCP traffic on port range (9092 - 9098) from security group sgKafkaProducer to security group sgMskCluster"
-        )
-        sgMskCluster.add_ingress_rule(
-            peer = ec2.Peer.security_group_id(sgKafkaProducer.security_group_id),
-            connection = ec2.Port.tcp_range(parameters.sgKafkaInboundPort, parameters.sgKafkaOutboundPort),
-            description = "Allow TCP traffic on port range (9092 - 9098) from security group sgKafkaProducer to security group sgMskCluster"
-        )
-        sgKafkaProducer.add_ingress_rule(
-            peer = ec2.Peer.security_group_id(sgMskCluster.security_group_id),
-            connection = ec2.Port.tcp_range(parameters.sgKafkaInboundPort, parameters.sgKafkaOutboundPort),
-            description = "Allow TCP traffic on port range (9092 - 9098) from security group sgMskCluster to security group sgKafkaProducer"
-        )
-        sgMskCluster.add_ingress_rule(
             peer = ec2.Peer.security_group_id(sgApacheFlink.security_group_id),
             connection = ec2.Port.tcp_range(parameters.sgMskClusterInboundPort, parameters.sgMskClusterOutboundPort),
             description = "Allow all TCP traffic from security group sgApacheFlink to security group sgMskCluster"
@@ -161,8 +135,8 @@ class dataFeedMsk(Stack):
         customerManagedKey = kms.Key(self, "customerManagedKey",
             alias = f"{parameters.project}-{parameters.env}-{parameters.app}-sasl/scram-key",
             description = "Customer managed key",
-            enable_key_rotation = True
-            # removal_policy = logs.RemovalPolicy.DESTROY
+            enable_key_rotation = True,
+            removal_policy = RemovalPolicy.DESTROY
         )
         tags.of(customerManagedKey).add("name", f"{parameters.project}-{parameters.env}-{parameters.app}-customerManagedKey")
         tags.of(customerManagedKey).add("project", parameters.project)
@@ -190,7 +164,6 @@ class dataFeedMsk(Stack):
             encryption_key = customerManagedKey
         )
         openSearchMasterPasswordSecretValue = openSearchSecrets.secret_value
-        # openSearchMasterPasswordSecretValueStr = openSearchMasterPasswordSecretValue.to_string()
         openSearchMasterPassword = openSearchMasterPasswordSecretValue.unsafe_unwrap()
 
 #############       SSM Parameter Store Configurations      #############
@@ -206,15 +179,20 @@ class dataFeedMsk(Stack):
         
         mskClusterLogGroup = logs.LogGroup(self, "mskClusterLogGroup",
             log_group_name = f"{parameters.project}-{parameters.env}-{parameters.app}-mskClusterLogGroup",
-            retention = logs.RetentionDays.ONE_WEEK
-            # removal_policy = logs.LogGroup.apply_removal_policy(RemovalPolicy.DESTROY)
+            retention = logs.RetentionDays.ONE_WEEK,
+            removal_policy = RemovalPolicy.DESTROY
         )
-        # mskClusterLogGroup.apply_removal_policy(RemovalPolicy.DESTROY)
 
-        flinkAppLogGroup = logs.LogGroup(self, "apacheFlinkAppLogGroup",
+        apacheFlinkAppLogGroup = logs.LogGroup(self, "apacheFlinkAppLogGroup",
             log_group_name = f"{parameters.project}-{parameters.env}-{parameters.app}-flinkAppLogGroup",
-            retention = logs.RetentionDays.ONE_WEEK
-            # removal_policy = logs.LogGroup.apply_removal_policy(RemovalPolicy.DESTROY)
+            retention = logs.RetentionDays.ONE_WEEK,
+            removal_policy = RemovalPolicy.DESTROY
+        )
+        
+        apacheFlinkAppLogStream = logs.LogStream(self, "apacheFlinkAppLogStream",
+            log_stream_name = f"{parameters.project}-{parameters.env}-{parameters.app}-flinkAppLogStream",
+            log_group = logs.LogGroup.from_log_group_name(self, "importLogGroupName", log_group_name = apacheFlinkAppLogGroup.log_group_name),
+            removal_policy = RemovalPolicy.DESTROY
         )
 
 #############       MSK Cluster Configurations      #############
@@ -276,7 +254,7 @@ class dataFeedMsk(Stack):
 
         mskClusterBrokerUrlParamStore = ssm.StringParameter(self, "mskClusterBrokerUrlParamStore",
             parameter_name = f"blogAws-{parameters.env}-mskClusterBrokerUrl-ssmParamStore",
-            string_value = "dummy",
+            string_value = "dummy",         # We're passing a dummy value in this SSM parameter. The actual value will be replaced by EC2 userdata during the process
             tier = ssm.ParameterTier.STANDARD
         )
 
@@ -299,17 +277,17 @@ class dataFeedMsk(Stack):
                         actions=[
                             "kafka:ListClusters",
                             "kafka:DescribeCluster",
-                            "kafka:DescribeClusterV2",
                             "kafka-cluster:Connect",
-                            "kafka-cluster:AlterCluster",
-                            "kafka-cluster:DescribeClusterDynamicConfiguration",
+                            "kafka-cluster:ReadData",
+                            "kafka:DescribeClusterV2",
                             "kafka-cluster:CreateTopic",
                             "kafka-cluster:DeleteTopic",
+                            "kafka-cluster:AlterCluster",
                             "kafka-cluster:WriteData",
-                            "kafka-cluster:ReadData",
                             "kafka-cluster:AlterGroup",
                             "kafka-cluster:DescribeGroup",
-                            "kafka:GetBootstrapBrokers"
+                            "kafka:GetBootstrapBrokers",
+                            "kafka-cluster:DescribeClusterDynamicConfiguration",
                         ],
                         resources= [mskCluster.attr_arn,
                             f"arn:aws:kafka:{AWS.REGION}:{AWS.ACCOUNT_ID}:topic/{mskCluster.cluster_name}/*/*",
@@ -380,10 +358,10 @@ class dataFeedMsk(Stack):
                 iam.ManagedPolicy.from_aws_managed_policy_name("AmazonMSKReadOnlyAccess")
             ]
         )
-        tags.of(ec2MskClusterRole).add("name", f"{parameters.project}-{parameters.env}-{parameters.app}-apacheFlinkAppRole")
-        tags.of(ec2MskClusterRole).add("project", parameters.project)
-        tags.of(ec2MskClusterRole).add("env", parameters.env)
-        tags.of(ec2MskClusterRole).add("app", parameters.app)
+        tags.of(apacheFlinkAppRole).add("name", f"{parameters.project}-{parameters.env}-{parameters.app}-apacheFlinkAppRole")
+        tags.of(apacheFlinkAppRole).add("project", parameters.project)
+        tags.of(apacheFlinkAppRole).add("env", parameters.env)
+        tags.of(apacheFlinkAppRole).add("app", parameters.app)
 
         apacheFlinkAppRole.attach_inline_policy(
             iam.Policy(self, 'apacheFlinkAppPolicy',
@@ -401,7 +379,7 @@ class dataFeedMsk(Stack):
                         actions = [
                             "logs:DescribeLogGroups"
                         ],
-                        resources = [flinkAppLogGroup.log_group_arn]
+                        resources = [apacheFlinkAppLogGroup.log_group_arn]
                     ),
                     iam.PolicyStatement(
                         effect = iam.Effect.ALLOW,
@@ -417,13 +395,28 @@ class dataFeedMsk(Stack):
                         effect = iam.Effect.ALLOW,
                         actions = [
                             "ec2:CreateNetworkInterface",
-                            # "ec2:CreateNetworkInterfacePermission",
+                            "ec2:CreateNetworkInterfacePermission",
                             "ec2:DescribeNetworkInterfaces",
                             "ec2:DeleteNetworkInterface"
                         ],
                         resources = [f"arn:aws:ec2:{AWS.REGION}:{AWS.ACCOUNT_ID}:network-interface/*",
                                      f"arn:aws:ec2:{AWS.REGION}:{AWS.ACCOUNT_ID}:security-group/*",
                                      f"arn:aws:ec2:{AWS.REGION}:{AWS.ACCOUNT_ID}:subnet/*"
+                        ]
+                    ),
+                    iam.PolicyStatement(
+                        effect = iam.Effect.ALLOW,
+                        actions = [
+                            "logs:DescribeLogStreams"
+                        ],
+                        resources = [f"arn:aws:logs:{AWS.REGION}:{AWS.ACCOUNT_ID}:log-group:{apacheFlinkAppLogGroup.log_group_name}:log-stream:*"]
+                    ),
+                    iam.PolicyStatement(
+                        effect = iam.Effect.ALLOW,
+                        actions = [
+                            "logs:PutLogEvents"
+                        ],
+                        resources = [f"arn:aws:logs:{AWS.REGION}:{AWS.ACCOUNT_ID}:log-group:{apacheFlinkAppLogGroup.log_group_name}:log-stream:{apacheFlinkAppLogStream.log_stream_name}"
                         ]
                     )
                 ]
@@ -524,6 +517,8 @@ class dataFeedMsk(Stack):
             description = "MSK cluster configuration"
         )
 
+#############       2nd Iteration      #############
+
         # mskCluster.add_property_override(
         #     'BrokerNodeGroupInfo.ConnectivityInfo',
         #     {
@@ -614,6 +609,15 @@ class dataFeedMsk(Stack):
         #     "python3 ec2-script-historic.py"
         # )
         
+        # cluster = msk.Cluster(self, 'Cluster',
+        #     cluster_name = 'myCluster',
+        #     kafka_version = parameters.mskVersion,
+        #     vpc = ec2.Vpc.from_vpc_attributes(self, "importedVpc",
+        #         availability_zones = "us-east-1a",
+        #         vpc_id = vpc.vpc_id    
+        #     )
+        # )
+
         # mskCluster2 = msk.CfnCluster(
         #     self, "mskCluster2",
         #     cluster_name = f"{parameters.project}-{parameters.env}-{parameters.app}-mskCluster2",
@@ -741,8 +745,6 @@ class dataFeedMsk(Stack):
             version = opensearch.EngineVersion.open_search(OPENSEARCH_VERSION),
             capacity = opensearch.CapacityConfig(
                 multi_az_with_standby_enabled = parameters.openSearchMultiAzWithStandByEnable,
-                # master_nodes = parameters.openSearchMasterNodes,
-                # master_node_instance_type = parameters.masterNodeInstanceType,
                 data_nodes = parameters.openSearchDataNodes,
                 data_node_instance_type = parameters.openSearchDataNodeInstanceType
             ),
@@ -761,44 +763,82 @@ class dataFeedMsk(Stack):
                 master_user_password = openSearchMasterPasswordSecretValue
             )
         )
-        # openSearchDomainEndpoint = openSearchDomain.domain_endpoint
 
 #############       Apache Flink Configurations      #############
 
-        # FLINK_RUNTIME_VERSION = parameters.apacheFlinkRuntimeVersion
-        sgApacheFlinkId = ec2.SecurityGroup.from_security_group_id(self, "sgApacheFlinkId", security_group_id = sgApacheFlink.security_group_id)
-        apacheFlinkApp = flink.Application(self, "apacheFlinkApp",
-            code = flink.ApplicationCode.from_bucket(bucket = bucket,file_key = parameters.apacheFlinkBucketKey),
-            runtime = flink.Runtime.FLINK_1_18,
+        subnet_ids = vpc.select_subnets(subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS).subnet_ids
+        apacheFlinkApp = kinesisanalyticsv2.CfnApplication(self, "apacheFlinkApp",
             application_name = f"{parameters.project}-{parameters.env}-{parameters.app}-apacheFlinkApp",
-            vpc = vpc,
-            security_groups = [sgApacheFlinkId],
-            vpc_subnets = ec2.SubnetSelection(subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS),
-            auto_scaling_enabled = parameters.apacheFlinkAutoScalingEnable,
-            property_groups = {
-                "FlinkApplicationProperties": {
-                    "msk.username" : parameters.mskClusterUsername,
-                    "msk.broker.url" : mskClusterBrokerUrlParamStore.string_value,
-                    "msk.password" : mskClusterPasswordSecretValue, 
-                    "opensearch.endpoint" : openSearchDomain.domain_endpoint,
-                    "opensearch.username" : parameters.openSearchMasterUsername,
-                    "opensearch.password" : openSearchMasterPassword, #openSearchMasterPasswordSecretValueStr,
-                    "opensearch.port" : "443",
-                    "event.ticker.interval.minutes" : parameters.eventTickerIntervalMinutes,
-                    "event.ticker.1" : parameters.mskTopicName1,
-                    "event.ticker.2" : parameters.mskTopicName2
-                }
-            },
-            role = apacheFlinkAppRole,
-            parallelism = parameters.apacheFlinkParallelism,
-            parallelism_per_kpu = parameters.apacheFlinkParallelismPerKpu,
-            checkpointing_enabled = parameters.apacheFlinkCheckpointingEnabled,
-            log_group = flinkAppLogGroup
+            application_description = "Apache Flink Application",
+            runtime_environment=parameters.apacheFlinkRuntimeVersion,
+            service_execution_role=apacheFlinkAppRole.role_arn,
+            application_configuration=kinesisanalyticsv2.CfnApplication.ApplicationConfigurationProperty(
+                application_code_configuration=kinesisanalyticsv2.CfnApplication.ApplicationCodeConfigurationProperty(
+                    code_content_type = "ZIPFILE",
+                    code_content=kinesisanalyticsv2.CfnApplication.CodeContentProperty(
+                        s3_content_location=kinesisanalyticsv2.CfnApplication.S3ContentLocationProperty(
+                            bucket_arn=bucket.bucket_arn,
+                            file_key=parameters.apacheFlinkBucketKey,
+                        )
+                    )
+                ),
+                application_snapshot_configuration=kinesisanalyticsv2.CfnApplication.ApplicationSnapshotConfigurationProperty(
+                    snapshots_enabled=False
+                ),
+                flink_application_configuration=kinesisanalyticsv2.CfnApplication.FlinkApplicationConfigurationProperty(
+                    checkpoint_configuration=kinesisanalyticsv2.CfnApplication.CheckpointConfigurationProperty(
+                        configuration_type="CUSTOM",
+                        checkpointing_enabled=True
+                    ),
+                    monitoring_configuration=kinesisanalyticsv2.CfnApplication.MonitoringConfigurationProperty(
+                        configuration_type="CUSTOM",
+                        log_level="INFO",
+                        metrics_level="APPLICATION"
+                    ),
+                    parallelism_configuration=kinesisanalyticsv2.CfnApplication.ParallelismConfigurationProperty(
+                        configuration_type="CUSTOM",
+                        auto_scaling_enabled=True
+                    )
+                ),
+                environment_properties=kinesisanalyticsv2.CfnApplication.EnvironmentPropertiesProperty(
+                    property_groups=[kinesisanalyticsv2.CfnApplication.PropertyGroupProperty(
+                        property_group_id="FlinkApplicationProperties",
+                        property_map={
+                            "msk.username" : parameters.mskClusterUsername,
+                            "msk.broker.url" : mskClusterBrokerUrlParamStore.string_value,
+                            "msk.password" : mskClusterPasswordSecretValue, 
+                            "opensearch.endpoint" : openSearchDomain.domain_endpoint,
+                            "opensearch.username" : parameters.openSearchMasterUsername,
+                            "opensearch.password" : openSearchMasterPassword,
+                            "opensearch.port" : "443",
+                            "event.ticker.interval.minutes" : parameters.eventTickerIntervalMinutes,
+                            "event.ticker.1" : parameters.mskTopicName1,
+                            "event.ticker.2" : parameters.mskTopicName2
+                        }
+                    )]
+                ),
+                vpc_configurations = [kinesisanalyticsv2.CfnApplication.VpcConfigurationProperty(
+                    security_group_ids = [sgApacheFlink.security_group_id],
+                    subnet_ids = subnet_ids
+                )],
+            )
         )
-        tags.of(ec2MskClusterRole).add("name", f"{parameters.project}-{parameters.env}-{parameters.app}-apacheFlinkApp")
-        tags.of(ec2MskClusterRole).add("project", parameters.project)
-        tags.of(ec2MskClusterRole).add("env", parameters.env)
-        tags.of(ec2MskClusterRole).add("app", parameters.app)
+        apacheFlinkApp.node.add_dependency(apacheFlinkAppRole)
+        apacheFlinkApp.node.add_dependency(sgApacheFlink)
+        apacheFlinkApp.node.add_dependency(kafkaClientEC2Instance)
+        apacheFlinkApp.node.add_dependency(openSearchDomain)
+        tags.of(apacheFlinkApp).add("name", f"{parameters.project}-{parameters.env}-{parameters.app}-apacheFlinkApp")
+        tags.of(apacheFlinkApp).add("project", parameters.project)
+        tags.of(apacheFlinkApp).add("env", parameters.env)
+        tags.of(apacheFlinkApp).add("app", parameters.app)
+
+        apacheFlinkAppLogs = kinesisanalyticsv2.CfnApplicationCloudWatchLoggingOption(self, "apacheFlinkAppLogs",
+            application_name = apacheFlinkApp.application_name,
+            cloud_watch_logging_option = kinesisanalyticsv2.CfnApplicationCloudWatchLoggingOption.CloudWatchLoggingOptionProperty(
+                log_stream_arn = f"arn:aws:logs:{AWS.REGION}:{AWS.ACCOUNT_ID}:log-group:{apacheFlinkAppLogGroup.log_group_name}:log-stream:{apacheFlinkAppLogStream.log_stream_name}"
+            )
+        )
+        apacheFlinkAppLogs.node.add_dependency(apacheFlinkApp)
 
 #############       Output Values      #############
 
@@ -808,97 +848,87 @@ class dataFeedMsk(Stack):
             export_name = f"{parameters.project}-{parameters.env}-{parameters.app}-vpcId"
         )
         CfnOutput(self, "sgEc2MskClusterId",
-            value=sgEc2MskCluster.security_group_id,
+            value = sgEc2MskCluster.security_group_id,
             description = "Security group Id of EC2 MSK cluster",
             export_name = f"{parameters.project}-{parameters.env}-{parameters.app}-sgEc2MskClusterId"
         )
-        CfnOutput(self, "sgKafkaProducerId",
-            value=sgKafkaProducer.security_group_id,
-            description = "Security group Id of EC2 kafka producer",
-            export_name = f"{parameters.project}-{parameters.env}-{parameters.app}-sgKafkaProducerId"
-        )
         CfnOutput(self, "sgMskClusterId",
-            value=sgMskCluster.security_group_id,
+            value = sgMskCluster.security_group_id,
             description = "Security group Id of MSK Cluster",
             export_name = f"{parameters.project}-{parameters.env}-{parameters.app}-sgMskClusterId"
         )
         CfnOutput(self, "ec2MskClusterRoleArn",
-            value=ec2MskClusterRole.role_arn,
+            value = ec2MskClusterRole.role_arn,
             description = "ARN of EC2 MSK cluster role",
             export_name = f"{parameters.project}-{parameters.env}-{parameters.app}-ec2MskClusterRoleArn"
         )
         CfnOutput(self, "mskClusterName",
-            value=mskCluster.cluster_name,
+            value = mskCluster.cluster_name,
             description = "Name of an MSK cluster",
             export_name = f"{parameters.project}-{parameters.env}-{parameters.app}-mskClusterName"
         )
         CfnOutput(self, "mskClusterArn",
-            value=mskCluster.attr_arn,
+            value = mskCluster.attr_arn,
             description = "ARN of an MSK cluster",
             export_name = f"{parameters.project}-{parameters.env}-{parameters.app}-mskClusterArn"
         )
         CfnOutput(self, "apacheFlinkAppRoleArn",
-            value=apacheFlinkAppRole.role_arn,
+            value = apacheFlinkAppRole.role_arn,
             description = "ARN of apache flink app role",
             export_name = f"{parameters.project}-{parameters.env}-{parameters.app}-apacheFlinkAppRoleArn"
         )
         # CfnOutput(self, "kafkaProducerEC2InstanceId",
-        #     value=kafkaProducerEC2Instance.instance_id,
+        #     value = kafkaProducerEC2Instance.instance_id,
         #     description = "Kafka producer EC2 instance Id",
         #     export_name = f"{parameters.project}-{parameters.env}-{parameters.app}-kafkaProducerEC2InstanceId"
         # )
-        # CfnOutput(self, "kafkaClientEC2InstanceId",
-        #     value=kafkaClientEC2Instance.instance_id,
-        #     description = "Kafka client EC2 instance Id",
-        #     export_name = f"{parameters.project}-{parameters.env}-{parameters.app}-kafkaClientEC2InstanceId"
-        # )
+        CfnOutput(self, "kafkaClientEC2InstanceId",
+            value = kafkaClientEC2Instance.instance_id,
+            description = "Kafka client EC2 instance Id",
+            export_name = f"{parameters.project}-{parameters.env}-{parameters.app}-kafkaClientEC2InstanceId"
+        )
         CfnOutput(self, "customerManagedKeyArn",
-            value=customerManagedKey.key_arn,
+            value = customerManagedKey.key_arn,
             description = "ARN of customer managed key",
             export_name = f"{parameters.project}-{parameters.env}-{parameters.app}-customerManagedKeyArn"
         )
         CfnOutput(self, "mskClusterSecretsArn",
-            value=mskClusterSecrets.secret_arn,
+            value = mskClusterSecrets.secret_arn,
             description = "ARN of MSK cluster secrets",
             export_name = f"{parameters.project}-{parameters.env}-{parameters.app}-mskClusterSecretsArn"
         )
         CfnOutput(self, "mskClusterSecretsName",
-            value=mskClusterSecrets.secret_name,
+            value = mskClusterSecrets.secret_name,
             description = "MSK cluster secrets name",
             export_name = f"{parameters.project}-{parameters.env}-{parameters.app}-mskClusterSecretsName"
         )
         CfnOutput(self, "flinkAppLogGroupArn",
-            value = flinkAppLogGroup.log_group_arn,
+            value = apacheFlinkAppLogGroup.log_group_arn,
             description = "Arn of an Apache Flink log group",
-            export_name = f"{parameters.project}-{parameters.env}-{parameters.app}-flinkAppLogGroupArn"
+            export_name = f"{parameters.project}-{parameters.env}-{parameters.app}-apacheFlinkAppLogGroupArn"
         )
         CfnOutput(self, "flinkAppLogGroupName",
-            value = flinkAppLogGroup.log_group_name,
+            value = apacheFlinkAppLogGroup.log_group_name,
             description = "Name of an Apache Flink log group",
-            export_name = f"{parameters.project}-{parameters.env}-{parameters.app}-flinkAppLogGroupName"
-        )
-        CfnOutput(self, "apacheFlinkAppArn",
-            value = apacheFlinkApp.application_arn,
-            description = "Arn of an Apache Flink application",
-            export_name = f"{parameters.project}-{parameters.env}-{parameters.app}-apacheFlinkAppArn"
-        )
-        CfnOutput(self, "apacheFlinkAppName",
-            value = apacheFlinkApp.application_name,
-            description = "Name of an Apache Flink application",
-            export_name = f"{parameters.project}-{parameters.env}-{parameters.app}-apacheFlinkAppName"
+            export_name = f"{parameters.project}-{parameters.env}-{parameters.app}-apacheFlinkAppLogGroupName"
         )
         CfnOutput(self, "openSearchSecretsArn",
-            value=openSearchSecrets.secret_arn,
+            value = openSearchSecrets.secret_arn,
             description = "ARN of MSK cluster secrets",
             export_name = f"{parameters.project}-{parameters.env}-{parameters.app}-openSearchSecretsArn"
         )
         CfnOutput(self, "openSearchDomainName",
-            value=openSearchDomain.domain_name,
+            value = openSearchDomain.domain_name,
             description = "OpenSearch domain name",
             export_name = f"{parameters.project}-{parameters.env}-{parameters.app}-openSearchDomainName"
         )
         CfnOutput(self, "openSearchDomainEndpoint",
-            value=openSearchDomain.domain_endpoint,
+            value = openSearchDomain.domain_endpoint,
             description = "OpenSearch domain endpoint",
             export_name = f"{parameters.project}-{parameters.env}-{parameters.app}-openSearchDomainEndpoint"
+        )
+        CfnOutput(self, "apacheFlinkAppName",
+            value = apacheFlinkApp.application_name,
+            description = "Apache flink application name",
+            export_name = f"{parameters.project}-{parameters.env}-{parameters.app}-apacheFlinkAppName"
         )

@@ -7,6 +7,7 @@ from aws_cdk import (
     aws_s3 as s3,
     aws_iam as iam,
     aws_msk as msk,
+    aws_msk_alpha as mskAlpha,
     aws_ssm as ssm,
     custom_resources as cr,
     aws_secretsmanager as secretsmanager,
@@ -52,6 +53,15 @@ class dataFeedMskCrossAccount(Stack):
         tags.of(vpc).add("project", parameters.project)
         tags.of(vpc).add("env", parameters.env)
         tags.of(vpc).add("app", parameters.app)
+
+        # cluster = mskAlpha.Cluster(self, 'Cluster',
+        #     cluster_name = 'myCluster',
+        #     kafka_version = parameters.mskVersion,
+        #     vpc = ec2.Vpc.from_vpc_attributes(self, "importedVpc",
+        #         availability_zones = "us-east-1a",
+        #         vpc_id = vpc.vpc_id    
+        #     )
+        # )
 
 #############       EC2 Key Pair Configurations      #############
 

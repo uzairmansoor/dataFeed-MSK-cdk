@@ -165,3 +165,38 @@
                         "cat ~/.bashrc",
                         "python3 ec2-script-historic.py"
         )
+
+        # FLINK_RUNTIME_VERSION = parameters.apacheFlinkRuntimeVersion
+        # sgApacheFlinkId = ec2.SecurityGroup.from_security_group_id(self, "sgApacheFlinkId", security_group_id = sgApacheFlink.security_group_id)
+        # apacheFlinkApp = flink.Application(self, "apacheFlinkApp",
+        #     code = flink.ApplicationCode.from_bucket(bucket = bucket,file_key = parameters.apacheFlinkBucketKey),
+        #     runtime = flink.Runtime.FLINK_1_18,
+        #     application_name = f"{parameters.project}-{parameters.env}-{parameters.app}-apacheFlinkApp",
+        #     vpc = vpc,
+        #     security_groups = [sgApacheFlinkId],
+        #     vpc_subnets = ec2.SubnetSelection(subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS),
+        #     auto_scaling_enabled = parameters.apacheFlinkAutoScalingEnable,
+        #     property_groups = {
+        #         "FlinkApplicationProperties": {
+        #             "msk.username" : parameters.mskClusterUsername,
+        #             "msk.broker.url" : mskClusterBrokerUrlParamStore.string_value,
+        #             "msk.password" : mskClusterPasswordSecretValue, 
+        #             "opensearch.endpoint" : openSearchDomain.domain_endpoint,
+        #             "opensearch.username" : parameters.openSearchMasterUsername,
+        #             "opensearch.password" : openSearchMasterPassword,
+        #             "opensearch.port" : "443",
+        #             "event.ticker.interval.minutes" : parameters.eventTickerIntervalMinutes,
+        #             "event.ticker.1" : parameters.mskTopicName1,
+        #             "event.ticker.2" : parameters.mskTopicName2
+        #         }
+        #     },
+        #     role = apacheFlinkAppRole,
+        #     parallelism = parameters.apacheFlinkParallelism,
+        #     parallelism_per_kpu = parameters.apacheFlinkParallelismPerKpu,
+        #     checkpointing_enabled = parameters.apacheFlinkCheckpointingEnabled,
+        #     log_group = flinkAppLogGroup
+        # )
+        # tags.of(ec2MskClusterRole).add("name", f"{parameters.project}-{parameters.env}-{parameters.app}-apacheFlinkApp")
+        # tags.of(ec2MskClusterRole).add("project", parameters.project)
+        # tags.of(ec2MskClusterRole).add("env", parameters.env)
+        # tags.of(ec2MskClusterRole).add("app", parameters.app)

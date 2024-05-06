@@ -56,7 +56,7 @@ ec2AmiName = "ubuntu/images/hvm-ssd/ubuntu-jammy-22.04-amd64-server-20220420"   
 ###   Apache Flink Parameters   ###
 
 apacheFlinkBucketKey = "flink-app-1.0.jar"  #Key for accessing the Apache Flink bucket
-# apacheFlinkRuntimeVersion = "FLINK_1_11"    #Runtime version of Apache Flink
+apacheFlinkRuntimeVersion = "FLINK-1_18"    #Runtime version of Apache Flink
 apacheFlinkAutoScalingEnable = True         #Enable auto-scaling for Apache Flink
 apacheFlinkParallelism = 1                  #Parallelism degree for Apache Flink
 apacheFlinkParallelismPerKpu = 1            #Parallelism degree per KPU (Kinesis Processing Unit) for Apache Flink
