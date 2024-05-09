@@ -197,6 +197,29 @@ class dataFeedMsk(Stack):
 
 #############       MSK Cluster Configurations      #############
 
+        mskClusterConfigProperties = [
+            "auto.create.topics.enable=false",
+            "default.replication.factor=3",
+            "min.insync.replicas=2",
+            "num.io.threads=8",
+            "num.network.threads=5",
+            "num.partitions=1",
+            "num.replica.fetchers=2",
+            "replica.lag.time.max.ms=30000",
+            "socket.receive.buffer.bytes=102400",
+            "socket.request.max.bytes=104857600",
+            "socket.send.buffer.bytes=102400",
+            "unclean.leader.election.enable=false",
+            "zookeeper.session.timeout.ms=18000",
+            "allow.everyone.if.no.acl.found=true"
+        ]
+        mskClusterConfigProperties = "\n".join(mskClusterConfigProperties)
+        mskClusterConfiguration = msk.CfnConfiguration(self, "mskClusterConfiguration",
+            name = f"{parameters.project}-{parameters.env}-{parameters.app}-mskClusterConfiguration",
+            server_properties = mskClusterConfigProperties,
+            description = "MSK cluster configuration"
+        )
+
         mskCluster = msk.CfnCluster(self, "mskCluster",
             cluster_name = f"{parameters.project}-{parameters.env}-{parameters.app}-mskCluster",
             kafka_version = parameters.mskVersion,
@@ -227,7 +250,10 @@ class dataFeedMsk(Stack):
                     )
                 )
             ),
-            configuration_info=None,
+            configuration_info=msk.CfnCluster.ConfigurationInfoProperty(
+                arn=mskClusterConfiguration.attr_arn,
+                revision=mskClusterConfiguration.attr_latest_revision_revision
+            ),
             encryption_info = msk.CfnCluster.EncryptionInfoProperty(
                 encryption_in_transit = msk.CfnCluster.EncryptionInTransitProperty(
                     client_broker = parameters.mskEncryptionClientBroker,
@@ -258,6 +284,67 @@ class dataFeedMsk(Stack):
             tier = ssm.ParameterTier.STANDARD
         )
 
+#We are unable to activate the SASL/SCRAM authentication method for client authentication during the cluster creation process
+        enableSaslScramClientAuth = parameters.enableSaslScramClientAuth
+        if enableSaslScramClientAuth:
+            mskCluster.add_property_override(
+                'BrokerNodeGroupInfo.ConnectivityInfo',
+                {
+                    'VpcConnectivity': {
+                        'ClientAuthentication': {
+                            'Sasl': {
+                                'Iam': {'Enabled': False},
+                                'Scram': {'Enabled': True}
+                            },
+                            'Tls': {'Enabled': False}
+                        }
+                    }
+                }
+            )
+        else:
+            print("SASL SCRAM is not associated with the MSK Cluster")
+
+#In the second iteration, we will implement cluster configurations since setting "allow.everyone.if.no.acl.found=true" prevents topic creation in the MSK Cluster
+        enableClusterConfig = parameters.enableClusterConfig
+        if enableClusterConfig:
+            mskCluster.add_property_override(
+                'ConfigurationInfo',
+                {
+                    "Arn": mskClusterConfiguration.attr_arn,
+                    "Revision": mskClusterConfiguration.attr_latest_revision_revision
+                }
+            )
+        else:
+            print("Cluster Configuration is not associated with the MSK Cluster")
+
+#In the second iteration, we'll attach a cluster policy to address the Private Link scenario.
+        enableClusterPolicy = parameters.enableClusterPolicy
+        if enableClusterPolicy:
+            mskClusterPolicy = msk.CfnClusterPolicy(self, "mskClusterPolicy",
+                cluster_arn = mskClusterArnParamStoreValue,
+                policy = {
+                    "Version": "2012-10-17",
+                    "Statement": [
+                        {
+                            "Effect": "Allow",
+                            "Principal": {
+                                "AWS": [parameters.mskCrossAccountId]
+                            },
+                            "Action": [
+                                "kafka:CreateVpcConnection",
+                                "kafka:GetBootstrapBrokers",
+                                "kafka:DescribeCluster",
+                                "kafka:DescribeClusterV2"
+                            ],
+                            "Resource": mskClusterArnParamStoreValue
+                        }
+                    ]
+                }
+            )
+            mskClusterPolicy.node.add_dependency(mskCluster)
+        else:
+            print("Cluster Policy is not associated with the MSK Cluster")
+
 #############       IAM Roles and Policies Configurations      #############
 
         ec2MskClusterRole = iam.Role(self, "ec2MskClusterRole",
@@ -286,7 +373,6 @@ class dataFeedMsk(Stack):
                             "kafka-cluster:WriteData",
                             "kafka-cluster:AlterGroup",
                             "kafka-cluster:DescribeGroup",
-                            "kafka:GetBootstrapBrokers",
                             "kafka-cluster:DescribeClusterDynamicConfiguration",
                         ],
                         resources= [mskCluster.attr_arn,
@@ -334,8 +420,8 @@ class dataFeedMsk(Stack):
                             "s3:GetObject",
                             "s3:PutObject"
                         ],
-                        resources= [f"arn:aws:s3:::{parameters.sourceBucketName}",
-                                    f"arn:aws:s3:::{parameters.sourceBucketName}/*"
+                        resources= [f"arn:aws:s3:::{bucket.bucket_name}",
+                                    f"arn:aws:s3:::{bucket.bucket_name}/*"
                         ]
                     ),
                     iam.PolicyStatement(
@@ -467,8 +553,11 @@ class dataFeedMsk(Stack):
             f"sasl.mechanism=SCRAM-SHA-512",
             f"ssl.truststore.location=/home/ec2-user/tmp/kafka.client.truststore.jks",
             "EOF",
+            # f'/kafka_2.13-3.5.1/bin/kafka-acls.sh --bootstrap-server $BOOTSTRAP_SERVERS --add --allow-principal  User:{parameters.mskClusterUsername} --operation All --cluster --command-config ./client_sasl.properties',
             f'/kafka_2.13-3.5.1/bin/kafka-topics.sh --bootstrap-server $BOOTSTRAP_SERVERS --command-config /home/ec2-user/client_sasl.properties --create --topic {parameters.mskTopicName1} --replication-factor 2',
             f'/kafka_2.13-3.5.1/bin/kafka-topics.sh --bootstrap-server $BOOTSTRAP_SERVERS --command-config /home/ec2-user/client_sasl.properties --create --topic {parameters.mskTopicName2} --replication-factor 2',
+            # f'/kafka_2.13-3.5.1/bin/kafka-topics.sh --bootstrap-server $BOOTSTRAP_SERVERS --command-config /home/ec2-user/client_sasl.properties --create --topic {parameters.mskTopicName3} --replication-factor 2',
+            # f'/kafka_2.13-3.5.1/bin/kafka-topics.sh --bootstrap-server $BOOTSTRAP_SERVERS --command-config /home/ec2-user/client_sasl.properties --create --topic {parameters.mskTopicName4} --replication-factor 2',
             f'/kafka_2.13-3.5.1/bin/kafka-topics.sh --bootstrap-server $BOOTSTRAP_SERVERS --list --command-config ./client_sasl.properties',  
             "cd /home/ec2-user",
             "sudo yum update -y",
@@ -480,42 +569,19 @@ class dataFeedMsk(Stack):
             "sudo pip3 install virtualenv",
             "sudo python3 -m virtualenv alpaca-script",
             "source alpaca-script/bin/activate",
-            f"pip install -r <(aws s3 cp s3://{parameters.sourceBucketName}/python-scripts/requirement.txt -)",
-            f"aws s3 cp s3://{parameters.sourceBucketName}/python-scripts/ec2-script-historic.py .",
-            f"aws s3 cp s3://{parameters.sourceBucketName}/python-scripts/stock_mapper.py .",
-            f"aws s3 cp s3://{parameters.sourceBucketName}/python-scripts/ec2-script-live.py .",
-            'export API_KEY=PKPBAXYRYGBBDNGOBYV9',
-            'export SECRET_KEY=FC4vp8HUkno88tttRMYpONbOBTmcY9lcFXqc5msa',
+            f"pip install -r <(aws s3 cp s3://{bucket.bucket_name}/python-scripts/requirement.txt -)",
+            f"aws s3 cp s3://{bucket.bucket_name}/python-scripts/ec2-script-historic-para.py .",
+            f"aws s3 cp s3://{bucket.bucket_name}/python-scripts/stock_mapper.py .",
+            f"aws s3 cp s3://{bucket.bucket_name}/python-scripts/ec2-script-live.py .",
+            'export API_KEY=PKECLY5H0GVN02PAODUC',
+            'export SECRET_KEY=AFHK20nUtVfmiTfuMTUV51OJe4YaQybUSbAs7o02',
             'export KAFKA_SASL_MECHANISM=SCRAM-SHA-512',
             f'export KAFKA_SASL_USERNAME={parameters.mskClusterUsername}',
             f'export KAFKA_SASL_PASSWORD={mskClusterPwdParamStoreValue}',
-            "python3 ec2-script-historic.py"
+            "python3 ec2-script-historic-para.py"
         )
 
 #############       Overriding some properties of MSK cluster      #############
-
-        mskClusterConfigProperties = [
-            "auto.create.topics.enable=false",
-            "default.replication.factor=3",
-            "min.insync.replicas=2",
-            "num.io.threads=8",
-            "num.network.threads=5",
-            "num.partitions=1",
-            "num.replica.fetchers=2",
-            "replica.lag.time.max.ms=30000",
-            "socket.receive.buffer.bytes=102400",
-            "socket.request.max.bytes=104857600",
-            "socket.send.buffer.bytes=102400",
-            "unclean.leader.election.enable=false",
-            "zookeeper.session.timeout.ms=18000"
-        ]
-#allow.everyone.if.no.acl.found=false
-        mskClusterConfigProperties = "\n".join(mskClusterConfigProperties)
-        mskClusterConfiguration = msk.CfnConfiguration(self, "mskClusterConfiguration",
-            name = f"{parameters.project}-{parameters.env}-{parameters.app}-mskClusterConfiguration",
-            server_properties = mskClusterConfigProperties,
-            description = "MSK cluster configuration"
-        )
 
 #############       2nd Iteration      #############
 
@@ -541,171 +607,6 @@ class dataFeedMsk(Stack):
         #         "revision": mskClusterConfiguration.attr_latest_revision_revision
         #     }
         # )
-
-#################################################### 2nd Cluster Thing Start ####################################################
-        # kafkaClientEc2BlockDevices2 = ec2.BlockDevice(device_name="/dev/xvda", volume=ec2.BlockDeviceVolume.ebs(10))
-        # kafkaClientEC2Instance2 = ec2.Instance(self, "kafkaClientEC2Instance2",
-        #     instance_name = f"{parameters.project}-{parameters.env}-{parameters.app}-kafkaClientEC2Instance2",
-        #     vpc = vpc,
-        #     instance_type = ec2.InstanceType.of(ec2.InstanceClass(parameters.ec2InstanceClass), ec2.InstanceSize(parameters.ec2InstanceSize)),
-        #     machine_image = ec2.AmazonLinuxImage(generation=ec2.AmazonLinuxGeneration.AMAZON_LINUX_2), #ec2.MachineImage().lookup(name = parameters.ec2AmiName),
-        #     availability_zone = vpc.availability_zones[1],
-        #     block_devices = [kafkaClientEc2BlockDevices2],
-        #     vpc_subnets = ec2.SubnetSelection(subnet_type=ec2.SubnetType.PUBLIC),
-        #     key_pair = keyPair,
-        #     security_group = sgEc2MskCluster,
-        #     user_data = ec2.UserData.for_linux(),
-        #     role = ec2MskClusterRole
-        # )
-
-        # kafkaClientEC2Instance2.user_data.add_commands(
-        #     "sudo su",
-        #     "sudo yum update -y",
-        #     "sudo yum -y install java-11",
-        #     "sudo yum install jq -y",
-        #     "wget https://archive.apache.org/dist/kafka/3.5.1/kafka_2.13-3.5.1.tgz",
-        #     "tar -xzf kafka_2.13-3.5.1.tgz",
-        #     "cd kafka_2.13-3.5.1/libs",
-        #     "wget https://github.com/aws/aws-msk-iam-auth/releases/download/v1.1.1/aws-msk-iam-auth-1.1.1-all.jar",
-        #     "cd /home/ec2-user",
-        #     "cat <<EOF > /home/ec2-user/users_jaas.conf",
-        #     "KafkaClient {",
-        #     f"    org.apache.kafka.common.security.scram.ScramLoginModule required",
-        #     f'    username="{parameters.mskClusterUsername}"',
-        #     f'    password="{mskClusterPwdParamStoreValue}";',
-        #     "};",
-        #     "EOF",
-        #     "export KAFKA_OPTS=-Djava.security.auth.login.config=/home/ec2-user/users_jaas.conf",
-        #     f"broker_url=$(aws kafka get-bootstrap-brokers --cluster-arn {mskCluster2.attr_arn} --region {AWS.REGION}| jq -r '.BootstrapBrokerStringSaslScram')",
-        #     "mkdir tmp",
-        #     "cp /usr/lib/jvm/java-11-amazon-corretto.x86_64/lib/security/cacerts /home/ec2-user/tmp/kafka.client.truststore.jks",
-        #     "cat <<EOF > /home/ec2-user/client_sasl.properties",
-        #     f"security.protocol=SASL_SSL",
-        #     f"sasl.mechanism=SCRAM-SHA-512",
-        #     f"ssl.truststore.location=/home/ec2-user/tmp/kafka.client.truststore.jks",
-        #     "EOF",
-        #     f"/kafka_2.13-3.5.1/bin/kafka-topics.sh --bootstrap-server \"$broker_url\" --command-config /home/ec2-user/client_sasl.properties --create --topic {parameters.mskTopicName1} --replication-factor 2",
-        #     f"/kafka_2.13-3.5.1/bin/kafka-topics.sh --bootstrap-server \"$broker_url\" --command-config /home/ec2-user/client_sasl.properties --create --topic {parameters.mskTopicName2} --replication-factor 2",
-
-        #     "cd /home/ec2-user",
-        #     "sudo yum update -y",
-        #     "sudo yum install python3 -y",
-        #     "sudo yum install python3-pip -y",
-        #     "sudo mkdir environment",
-        #     "cd environment",
-        #     "sudo yum install python3 virtualenv -y",
-        #     "sudo pip3 install virtualenv",
-        #     "sudo python3 -m virtualenv alpaca-script",
-        #     "source alpaca-script/bin/activate",
-        #     f"pip install -r <(aws s3 cp s3://{parameters.sourceBucketName}/python-scripts/requirement.txt -)",
-        #     f"aws s3 cp s3://{parameters.sourceBucketName}/python-scripts/ec2-script-historic.py .",
-        #     f"aws s3 cp s3://{parameters.sourceBucketName}/python-scripts/stock_mapper.py .",
-        #     "export API_KEY=PKPBAXYRYGBBDNGOBYV9",
-        #     "export SECRET_KEY=FC4vp8HUkno88tttRMYpONbOBTmcY9lcFXqc5msa",
-        #     "export export BOOTSTRAP_SERVERS={bootstrap-server-endpoint}",
-        #     "export KAFKA_SASL_MECHANISM=SCRAM-SHA-512",
-        #     f'"export KAFKA_SASL_USERNAME="{parameters.mskClusterUsername}""',
-        #     f'"export KAFKA_SASL_PASSWORD="{mskClusterPwdParamStoreValue}""',
-        #     "python3 ec2-script-historic.py"
-        # )
-        
-        # cluster = msk.Cluster(self, 'Cluster',
-        #     cluster_name = 'myCluster',
-        #     kafka_version = parameters.mskVersion,
-        #     vpc = ec2.Vpc.from_vpc_attributes(self, "importedVpc",
-        #         availability_zones = "us-east-1a",
-        #         vpc_id = vpc.vpc_id    
-        #     )
-        # )
-
-        # mskCluster2 = msk.CfnCluster(
-        #     self, "mskCluster2",
-        #     cluster_name = f"{parameters.project}-{parameters.env}-{parameters.app}-mskCluster2",
-        #     kafka_version = parameters.mskVersion,
-        #     number_of_broker_nodes = parameters.mskNumberOfBrokerNodes,
-        #     broker_node_group_info = msk.CfnCluster.BrokerNodeGroupInfoProperty(
-        #         instance_type = parameters.mskClusterInstanceType,
-        #         client_subnets = vpc.select_subnets(subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS).subnet_ids[:2],
-        #         security_groups = [sgMskCluster.security_group_id],
-        #         storage_info = msk.CfnCluster.StorageInfoProperty(  
-        #             ebs_storage_info = msk.CfnCluster.EBSStorageInfoProperty(
-        #                 volume_size = parameters.mskClusterVolumeSize
-        #             )
-        #         ),
-        #         connectivity_info = msk.CfnCluster.ConnectivityInfoProperty(
-        #             vpc_connectivity=msk.CfnCluster.VpcConnectivityProperty(
-        #                 client_authentication=msk.CfnCluster.VpcConnectivityClientAuthenticationProperty(
-        #                     sasl=msk.CfnCluster.VpcConnectivitySaslProperty(
-        #                         iam=msk.CfnCluster.VpcConnectivityIamProperty(
-        #                             enabled=False
-        #                         ),
-        #                         scram=msk.CfnCluster.VpcConnectivityScramProperty(
-        #                             enabled=True
-        #                         )
-        #                     ),
-        #                     tls=msk.CfnCluster.VpcConnectivityTlsProperty(
-        #                         enabled=False
-        #                     )
-        #                 )
-        #             )
-        #         )
-        #     ),
-        #     client_authentication = msk.CfnCluster.ClientAuthenticationProperty(
-        #         sasl = msk.CfnCluster.SaslProperty(
-        #             scram = msk.CfnCluster.ScramProperty(
-        #                 enabled = parameters.mskScramPropertyEnable
-        #             )
-        #         )
-        #     ),
-        #     configuration_info={
-        #         "arn": mskClusterConfiguration.attr_arn,
-        #         "revision": mskClusterConfiguration.attr_latest_revision_revision
-        #     },
-        #     encryption_info = msk.CfnCluster.EncryptionInfoProperty(
-        #         encryption_in_transit = msk.CfnCluster.EncryptionInTransitProperty(
-        #             client_broker = parameters.mskEncryptionClientBroker,
-        #             in_cluster = parameters.mskEncryptionInClusterEnable
-        #         )
-        #     )
-        # )
-        # tags.of(mskCluster2).add("name", f"{parameters.project}-{parameters.env}-{parameters.app}-mskCluster2")
-        # tags.of(mskCluster2).add("project", parameters.project)
-        # tags.of(mskCluster2).add("env", parameters.env)
-        # tags.of(mskCluster2).add("app", parameters.app)
-
-        # batchScramSecret2 = msk.CfnBatchScramSecret(self, "mskBatchScramSecret",
-        #     cluster_arn = mskCluster2.attr_arn,
-        #     secret_arn_list = [mskClusterSecrets.secret_arn]
-        # )
-
-        # mskCluster2.add_property_override(
-        #     'BrokerNodeGroupInfo.ConnectivityInfo',
-        #     {
-        #         'VpcConnectivity': {
-        #             'ClientAuthentication': {
-        #                 'Sasl': {
-        #                     'Iam': {'Enabled': False},
-        #                     'Scram': {'Enabled': True}
-        #                 },
-        #                 'Tls': {'Enabled': False}
-        #             }
-        #         }
-        #     }
-        # )
-#################################################### 2nd Cluster Thing End ####################################################
-
-        # mskClusterVpcConnection = msk.CfnVpcConnection(self, "mskClusterVpcConnection",
-        #     authentication="SASL_SCRAM",
-        #     client_subnets=vpc.select_subnets(subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS).subnet_ids[:2],
-        #     security_groups=[sgMskCluster.security_group_id],
-        #     target_cluster_arn=mskCluster.attr_arn,
-        #     vpc_id=vpc.vpc_id
-        # )
-        # tags.of(mskClusterVpcConnection).add("name", f"{parameters.project}-{parameters.env}-{parameters.app}-mskClusterVpcConnection")
-        # tags.of(mskClusterVpcConnection).add("project", parameters.project)
-        # tags.of(mskClusterVpcConnection).add("env", parameters.env)
-        # tags.of(mskClusterVpcConnection).add("app", parameters.app)
-        # mskClusterVpcConnection.node.add_dependency(mskCluster)
         
         # mskClusterPolicy = msk.CfnClusterPolicy(self, "mskClusterPolicy",
         #     cluster_arn=mskClusterArnParamStoreValue,
@@ -761,12 +662,14 @@ class dataFeedMsk(Stack):
             fine_grained_access_control = opensearch.AdvancedSecurityOptions(
                 master_user_name = parameters.openSearchMasterUsername,
                 master_user_password = openSearchMasterPasswordSecretValue
-            )
+            ),
+            removal_policy = RemovalPolicy.DESTROY
         )
+        openSearchDomain.node.add_dependency(kafkaClientEC2Instance)
 
 #############       Apache Flink Configurations      #############
 
-        subnet_ids = vpc.select_subnets(subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS).subnet_ids
+        subnetIds = vpc.select_subnets(subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS).subnet_ids
         apacheFlinkApp = kinesisanalyticsv2.CfnApplication(self, "apacheFlinkApp",
             application_name = f"{parameters.project}-{parameters.env}-{parameters.app}-apacheFlinkApp",
             application_description = "Apache Flink Application",
@@ -778,7 +681,7 @@ class dataFeedMsk(Stack):
                     code_content=kinesisanalyticsv2.CfnApplication.CodeContentProperty(
                         s3_content_location=kinesisanalyticsv2.CfnApplication.S3ContentLocationProperty(
                             bucket_arn=bucket.bucket_arn,
-                            file_key=parameters.apacheFlinkBucketKey,
+                            file_key=parameters.apacheFlinkBucketKey
                         )
                     )
                 ),
@@ -813,13 +716,15 @@ class dataFeedMsk(Stack):
                             "opensearch.port" : "443",
                             "event.ticker.interval.minutes" : parameters.eventTickerIntervalMinutes,
                             "event.ticker.1" : parameters.mskTopicName1,
-                            "event.ticker.2" : parameters.mskTopicName2
+                            "event.ticker.2" : parameters.mskTopicName2,
+                            # "topic.ticker.1" : parameters.mskTopicName3,
+                            # "topic.ticker.2" : parameters.mskTopicName4
                         }
                     )]
                 ),
                 vpc_configurations = [kinesisanalyticsv2.CfnApplication.VpcConfigurationProperty(
                     security_group_ids = [sgApacheFlink.security_group_id],
-                    subnet_ids = subnet_ids
+                    subnet_ids = subnetIds
                 )],
             )
         )

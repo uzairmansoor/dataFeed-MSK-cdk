@@ -1,5 +1,5 @@
 project = "awsblog"             #Project name
-env = "test"                      #Environment name
+env = "qa"                      #Environment name
 app = "app"                     #App name
 
 ###   VPC Parameters   ###
@@ -45,14 +45,12 @@ mskEncryptionClientBroker = "TLS"           #Encryption protocol used for commun
 mskEncryptionInClusterEnable = True         #Enable Encryption in MSK Cluster
 mskTopicName1 = "googl"                     #Name of the first MSK topic
 mskTopicName2 = "tesl"                      #Name of the second MSK topic
-mskTopicName3 = "googlenhanced"             #Name of the third MSK topic
-mskTopicName4 = "teslenhanced"              #Name of the fourth MSK topic
 mskCrossAccountId = "007756798683"          #Cross Account ID for MSK
 
 ###   MSK Client EC2 Instance Parameters   ### 
 
 ec2InstanceClass = "BURSTABLE2"             #Instance class for EC2 instances
-ec2InstanceSize = "LARGE"                   #Size of the EC2 instance
+ec2InstanceSize = "MICRO"                   #Size of the EC2 instance
 ec2AmiName = "ubuntu/images/hvm-ssd/ubuntu-jammy-22.04-amd64-server-20220420"   #AMI name for EC2 instances
 
 ###   Apache Flink Parameters   ###
@@ -67,18 +65,16 @@ apacheFlinkCheckpointingEnabled = True      #Enable checkpointing for Apache Fli
 ###   OpenSearch Parameters   ###
 
 openSearchVersion = "2.11"                          #Version of OpenSearch
-openSearchMultiAzWithStandByEnable = False          #Enable multi-AZ deployment with standby for OpenSearch                
-openSearchDataNodes = 1                             #Number of data nodes in OpenSearch cluster   
+openSearchMultiAzWithStandByEnable = False          #Enable multi-AZ deployment with standby for OpenSearch
+# openSearchMasterNodes = 0                 
+openSearchDataNodes = 1                             #Number of data nodes in OpenSearch cluster
+# masterNodeInstanceType = "m5.large.search"    
 openSearchDataNodeInstanceType = "t3.small.search"  #Instance type for OpenSearch data nodes
 openSearchVolumeSize = 10                           #Volume size for OpenSearch data nodes
 openSearchNodeToNodeEncryption = True               #Enable node-to-node encryption for OpenSearch
 openSearchEncryptionAtRest = True                   #Enable encryption at rest for OpenSearch
 openSearchMasterUsername = "uzair"                  #Username for accessing OpenSearch
 openSearchAvailabilityZoneCount = 2                 #Number of AZs for OpenSearch deployment
-openSearchAvailabilityZoneEnable = True             #Enable deployment of OpenSearch across multiple AZs                 
+openSearchAvailabilityZoneEnable = True             #Enable deployment of OpenSearch across multiple AZs
+# openSearchPort = "443"                    
 eventTickerIntervalMinutes = "1"                    #Interval in minutes for event ticker
-
-###   userInput   ###
-enableSaslScramClientAuth = True
-enableClusterConfig = True
-enableClusterPolicy = True

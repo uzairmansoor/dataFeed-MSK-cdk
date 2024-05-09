@@ -45,6 +45,8 @@ mskEncryptionClientBroker = "TLS"           #Encryption protocol used for commun
 mskEncryptionInClusterEnable = True         #Enable Encryption in MSK Cluster
 mskTopicName1 = "googl"                     #Name of the first MSK topic
 mskTopicName2 = "tesl"                      #Name of the second MSK topic
+mskTopicName3 = "googlenhanced"             #Name of the third MSK topic
+mskTopicName4 = "teslenhanced"              #Name of the fourth MSK topic
 mskCrossAccountId = "007756798683"          #Cross Account ID for MSK
 
 ###   MSK Client EC2 Instance Parameters   ### 
@@ -65,16 +67,18 @@ apacheFlinkCheckpointingEnabled = True      #Enable checkpointing for Apache Fli
 ###   OpenSearch Parameters   ###
 
 openSearchVersion = "2.11"                          #Version of OpenSearch
-openSearchMultiAzWithStandByEnable = False          #Enable multi-AZ deployment with standby for OpenSearch
-# openSearchMasterNodes = 0                 
-openSearchDataNodes = 1                             #Number of data nodes in OpenSearch cluster
-# masterNodeInstanceType = "m5.large.search"    
+openSearchMultiAzWithStandByEnable = False          #Enable multi-AZ deployment with standby for OpenSearch                
+openSearchDataNodes = 1                             #Number of data nodes in OpenSearch cluster   
 openSearchDataNodeInstanceType = "t3.small.search"  #Instance type for OpenSearch data nodes
 openSearchVolumeSize = 10                           #Volume size for OpenSearch data nodes
 openSearchNodeToNodeEncryption = True               #Enable node-to-node encryption for OpenSearch
 openSearchEncryptionAtRest = True                   #Enable encryption at rest for OpenSearch
 openSearchMasterUsername = "uzair"                  #Username for accessing OpenSearch
 openSearchAvailabilityZoneCount = 2                 #Number of AZs for OpenSearch deployment
-openSearchAvailabilityZoneEnable = True             #Enable deployment of OpenSearch across multiple AZs
-# openSearchPort = "443"                    
+openSearchAvailabilityZoneEnable = True             #Enable deployment of OpenSearch across multiple AZs                 
 eventTickerIntervalMinutes = "1"                    #Interval in minutes for event ticker
+
+###   userInput   ###
+enableSaslScramClientAuth = False
+enableClusterConfig = False
+enableClusterPolicy = False

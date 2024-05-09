@@ -25,8 +25,6 @@ class dataFeedMskCrossAccount(Stack):
     def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
 
-        
-        
         mskClusterConfigProperties = [
             "auto.create.topics.enable=false",
             "default.replication.factor=3",
@@ -40,9 +38,9 @@ class dataFeedMskCrossAccount(Stack):
             "socket.request.max.bytes=104857600",
             "socket.send.buffer.bytes=102400",
             "unclean.leader.election.enable=false",
-            "zookeeper.session.timeout.ms=18000"
+            "zookeeper.session.timeout.ms=18000",
+            "allow.everyone.if.no.acl.found=false"
         ]
-#allow.everyone.if.no.acl.found=false
         mskClusterConfigProperties = "\n".join(mskClusterConfigProperties)
         mskClusterConfiguration = msk.CfnConfiguration(self, "mskClusterConfiguration",
             name = f"{parameters.project}-{parameters.env}-{parameters.app}-mskClusterConfiguration",

@@ -1,5 +1,5 @@
 project = "awsblog"             #Project name
-env = "test"                      #Environment name
+env = "qa"                      #Environment name
 app = "app"                     #App name
 
 ###   VPC Parameters   ###
@@ -8,8 +8,8 @@ cidrRange = "10.20.0.0/16"      #IPv4 CIDR range for VPC
 numberOfNatGateways = 2         #Number of NAT Gateways
 enableDnsHostnames = True       #Specify whether to enable or disable DNS support for VPC
 enableDnsSupport = True         #Specify whether to enable or disable DNS hostnames
-az1 = "us-east-2a"              #Availability Zone ID
-az2 = "us-east-2b"              #Availability Zone ID
+az1 = "us-east-1a"              #Availability Zone ID
+az2 = "us-east-1b"              #Availability Zone ID
 cidrMaskForSubnets = 24         #IPv4 CIDR Mask for Subnets
 
 ###   EC2 Key Pair Parameters   ###
@@ -35,6 +35,9 @@ mskClusterUsername = "uzair"        #Username for MSK Cluster
 
 ###   MSK Kafka Parameters   ###
 
+mskClusterArn = "arn:aws:kafka:us-east-1:095773313313:cluster/awsblog-dev-app-mskCluster/69607437-28c7-4dcf-bde7-2c6cfd521bd1-24"
+mskClusterName = f'{project}-{env}-{app}-mskCluster'
+
 mskVersion = "3.5.1"                        #Version of MSK cluster
 mskNumberOfBrokerNodes = 2                  #Number of broker nodes of an MSK Cluster
 mskClusterInstanceType = "kafka.m5.large"   #Instance type of MSK cluster
@@ -45,14 +48,12 @@ mskEncryptionClientBroker = "TLS"           #Encryption protocol used for commun
 mskEncryptionInClusterEnable = True         #Enable Encryption in MSK Cluster
 mskTopicName1 = "googl"                     #Name of the first MSK topic
 mskTopicName2 = "tesl"                      #Name of the second MSK topic
-mskTopicName3 = "googlenhanced"             #Name of the third MSK topic
-mskTopicName4 = "teslenhanced"              #Name of the fourth MSK topic
 mskCrossAccountId = "007756798683"          #Cross Account ID for MSK
 
 ###   MSK Client EC2 Instance Parameters   ### 
 
 ec2InstanceClass = "BURSTABLE2"             #Instance class for EC2 instances
-ec2InstanceSize = "LARGE"                   #Size of the EC2 instance
+ec2InstanceSize = "MICRO"                   #Size of the EC2 instance
 ec2AmiName = "ubuntu/images/hvm-ssd/ubuntu-jammy-22.04-amd64-server-20220420"   #AMI name for EC2 instances
 
 ###   Apache Flink Parameters   ###
@@ -77,8 +78,3 @@ openSearchMasterUsername = "uzair"                  #Username for accessing Open
 openSearchAvailabilityZoneCount = 2                 #Number of AZs for OpenSearch deployment
 openSearchAvailabilityZoneEnable = True             #Enable deployment of OpenSearch across multiple AZs                 
 eventTickerIntervalMinutes = "1"                    #Interval in minutes for event ticker
-
-###   userInput   ###
-enableSaslScramClientAuth = True
-enableClusterConfig = True
-enableClusterPolicy = True
