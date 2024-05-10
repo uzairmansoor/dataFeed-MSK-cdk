@@ -44,7 +44,7 @@ mskEncryptionClientBroker = "TLS"           #Encryption protocol used for commun
                                             #brokers in MSK Cluster
 mskEncryptionInClusterEnable = True         #Enable Encryption in MSK Cluster
 mskTopicName1 = "googl"                     #Name of the first MSK topic
-mskTopicName2 = "tesl"                      #Name of the second MSK topic
+mskTopicName2 = "tsla"                      #Name of the second MSK topic
 mskTopicName3 = "googlenhanced"             #Name of the third MSK topic
 mskTopicName4 = "teslenhanced"              #Name of the fourth MSK topic
 mskCrossAccountId = "007756798683"          #Cross Account ID for MSK
