@@ -186,35 +186,35 @@ class dataFeedMskCrossAccount(Stack):
             role = ec2MskClusterRole
         )
 
-        # kafkaClientEC2Instance.user_data.add_commands(
-        #     "sudo su",
-        #     "sudo yum update -y",
-        #     "sudo yum -y install java-11",
-        #     "sudo yum install jq -y",
-        #     "wget https://archive.apache.org/dist/kafka/3.5.1/kafka_2.13-3.5.1.tgz",
-        #     "tar -xzf kafka_2.13-3.5.1.tgz",
-        #     "cd kafka_2.13-3.5.1/libs",
-        #     "wget https://github.com/aws/aws-msk-iam-auth/releases/download/v1.1.1/aws-msk-iam-auth-1.1.1-all.jar",
-        #     "cd /home/ec2-user",
-        #     "cat <<EOF > /home/ec2-user/users_jaas.conf",
-        #     "KafkaClient {",
-        #     f"    org.apache.kafka.common.security.scram.ScramLoginModule required",
-        #     f'    username="{parametersCrossAccount.username}"',
-        #     f'    password="{mskClusterPwdParamStoreValue}";',
-        #     "};",
-        #     "EOF",
-        #     "export KAFKA_OPTS=-Djava.security.auth.login.config=/home/ec2-user/users_jaas.conf",
-        #     f"broker_url=$(aws kafka get-bootstrap-brokers --cluster-arn {parametersCrossAccount.mskClusterArn} --region {parametersCrossAccount.region}| jq -r '.BootstrapBrokerStringSaslScram')",
-        #     "mkdir tmp",
-        #     "cp /usr/lib/jvm/java-11-amazon-corretto.x86_64/lib/security/cacerts /home/ec2-user/tmp/kafka.client.truststore.jks",
-        #     "cat <<EOF > /home/ec2-user/client_sasl.properties",
-        #     f"security.protocol=SASL_SSL",
-        #     f"sasl.mechanism=SCRAM-SHA-512",
-        #     f"ssl.truststore.location=/home/ec2-user/tmp/kafka.client.truststore.jks",
-        #     "EOF",
-        #     f"/kafka_2.13-3.5.1/bin/kafka-topics.sh --bootstrap-server \"$broker_url\" --command-config /home/ec2-user/client_sasl.properties --create --topic {parametersCrossAccount.topic_name}"
-        #     # f"/kafka_2.13-3.5.1/bin/kafka-topics.sh --bootstrap-server \"$broker_url\" --list --command-config ./client_sasl.properties"
-        # )
+        kafkaClientEC2Instance.user_data.add_commands(
+            "sudo su",
+            "sudo yum update -y",
+            "sudo yum -y install java-11",
+            "sudo yum install jq -y",
+            "wget https://archive.apache.org/dist/kafka/3.5.1/kafka_2.13-3.5.1.tgz",
+            "tar -xzf kafka_2.13-3.5.1.tgz",
+            "cd kafka_2.13-3.5.1/libs",
+            "wget https://github.com/aws/aws-msk-iam-auth/releases/download/v1.1.1/aws-msk-iam-auth-1.1.1-all.jar",
+            "cd /home/ec2-user",
+            "cat <<EOF > /home/ec2-user/users_jaas.conf",
+            "KafkaClient {",
+            f"    org.apache.kafka.common.security.scram.ScramLoginModule required",
+            f'    username="{parametersCrossAccount.username}"',
+            f'    password="{mskClusterPwdParamStoreValue}";',
+            "};",
+            "EOF",
+            "export KAFKA_OPTS=-Djava.security.auth.login.config=/home/ec2-user/users_jaas.conf",
+            f"broker_url=$(aws kafka get-bootstrap-brokers --cluster-arn {parametersCrossAccount.mskClusterArn} --region {parametersCrossAccount.region}| jq -r '.BootstrapBrokerStringSaslScram')",
+            "mkdir tmp",
+            "cp /usr/lib/jvm/java-11-amazon-corretto.x86_64/lib/security/cacerts /home/ec2-user/tmp/kafka.client.truststore.jks",
+            "cat <<EOF > /home/ec2-user/client_sasl.properties",
+            f"security.protocol=SASL_SSL",
+            f"sasl.mechanism=SCRAM-SHA-512",
+            f"ssl.truststore.location=/home/ec2-user/tmp/kafka.client.truststore.jks",
+            "EOF",
+            f"/kafka_2.13-3.5.1/bin/kafka-topics.sh --bootstrap-server \"$broker_url\" --command-config /home/ec2-user/client_sasl.properties --create --topic {parametersCrossAccount.topic_name}"
+            # f"/kafka_2.13-3.5.1/bin/kafka-topics.sh --bootstrap-server \"$broker_url\" --list --command-config ./client_sasl.properties"
+        )
     
         mskClusterVpcConnection = msk.CfnVpcConnection(self, "mskClusterVpcConnection",
             authentication="SASL_SCRAM",

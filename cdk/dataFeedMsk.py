@@ -545,6 +545,7 @@ class dataFeedMsk(Stack):
             "EOF",
             "export KAFKA_OPTS=-Djava.security.auth.login.config=/home/ec2-user/users_jaas.conf",
             f"export BOOTSTRAP_SERVERS=$(aws kafka get-bootstrap-brokers --cluster-arn {mskCluster.attr_arn} --region {AWS.REGION} | jq -r \'.BootstrapBrokerStringSaslScram\')",
+            f"export ZOOKEEPER_CONNECTION=$(aws kafka describe-cluster --cluster-arn {mskCluster.attr_arn} --region {AWS.REGION} | jq -r \'.ClusterInfo.ZookeeperConnectString\')",
             f'aws ssm put-parameter --name {mskClusterBrokerUrlParamStore.parameter_name} --value "$BOOTSTRAP_SERVERS" --type "{mskClusterBrokerUrlParamStore.parameter_type}" --overwrite --region {AWS.REGION}',
             "mkdir tmp",
             "cp /usr/lib/jvm/java-11-amazon-corretto.x86_64/lib/security/cacerts /home/ec2-user/tmp/kafka.client.truststore.jks",
@@ -553,11 +554,11 @@ class dataFeedMsk(Stack):
             f"sasl.mechanism=SCRAM-SHA-512",
             f"ssl.truststore.location=/home/ec2-user/tmp/kafka.client.truststore.jks",
             "EOF",
-            # f'/kafka_2.13-3.5.1/bin/kafka-acls.sh --bootstrap-server $BOOTSTRAP_SERVERS --add --allow-principal  User:{parameters.mskClusterUsername} --operation All --cluster --command-config ./client_sasl.properties',
+            f"/kafka/kafka_2.13-3.5.1/bin/kafka-acls.sh --authorizer-properties zookeeper.connect=$ZOOKEEPER_CONNECTION --add --allow-principal User:{parameters.mskClusterUsername} --operation Read --topic '*' --group '*'",
             f'/kafka_2.13-3.5.1/bin/kafka-topics.sh --bootstrap-server $BOOTSTRAP_SERVERS --command-config /home/ec2-user/client_sasl.properties --create --topic {parameters.mskTopicName1} --replication-factor 2',
             f'/kafka_2.13-3.5.1/bin/kafka-topics.sh --bootstrap-server $BOOTSTRAP_SERVERS --command-config /home/ec2-user/client_sasl.properties --create --topic {parameters.mskTopicName2} --replication-factor 2',
-            # f'/kafka_2.13-3.5.1/bin/kafka-topics.sh --bootstrap-server $BOOTSTRAP_SERVERS --command-config /home/ec2-user/client_sasl.properties --create --topic {parameters.mskTopicName3} --replication-factor 2',
-            # f'/kafka_2.13-3.5.1/bin/kafka-topics.sh --bootstrap-server $BOOTSTRAP_SERVERS --command-config /home/ec2-user/client_sasl.properties --create --topic {parameters.mskTopicName4} --replication-factor 2',
+            f'/kafka_2.13-3.5.1/bin/kafka-topics.sh --bootstrap-server $BOOTSTRAP_SERVERS --command-config /home/ec2-user/client_sasl.properties --create --topic {parameters.mskTopicName3} --replication-factor 2',
+            f'/kafka_2.13-3.5.1/bin/kafka-topics.sh --bootstrap-server $BOOTSTRAP_SERVERS --command-config /home/ec2-user/client_sasl.properties --create --topic {parameters.mskTopicName4} --replication-factor 2',
             f'/kafka_2.13-3.5.1/bin/kafka-topics.sh --bootstrap-server $BOOTSTRAP_SERVERS --list --command-config ./client_sasl.properties',  
             "cd /home/ec2-user",
             "sudo yum update -y",
@@ -717,8 +718,8 @@ class dataFeedMsk(Stack):
                             "event.ticker.interval.minutes" : parameters.eventTickerIntervalMinutes,
                             "event.ticker.1" : parameters.mskTopicName1,
                             "event.ticker.2" : parameters.mskTopicName2,
-                            # "topic.ticker.1" : parameters.mskTopicName3,
-                            # "topic.ticker.2" : parameters.mskTopicName4
+                            "topic.ticker.1" : parameters.mskTopicName3,
+                            "topic.ticker.2" : parameters.mskTopicName4
                         }
                     )]
                 ),

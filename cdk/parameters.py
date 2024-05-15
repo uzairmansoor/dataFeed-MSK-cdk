@@ -79,6 +79,6 @@ openSearchAvailabilityZoneEnable = True             #Enable deployment of OpenSe
 eventTickerIntervalMinutes = "1"                    #Interval in minutes for event ticker
 
 ###   userInput   ###
-enableSaslScramClientAuth = False
-enableClusterConfig = False
-enableClusterPolicy = False
+enableSaslScramClientAuth = True
+enableClusterConfig = True
+enableClusterPolicy = True
