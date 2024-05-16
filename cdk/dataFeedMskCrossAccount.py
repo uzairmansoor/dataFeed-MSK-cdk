@@ -18,7 +18,7 @@ from aws_cdk import (
     aws_kinesisanalytics_flink_alpha as flink,
     Aws as AWS
 )
-from . import parametersCrossAccount
+from . import parameters
 
 
 class dataFeedMskCrossAccount(Stack):
@@ -28,89 +28,89 @@ class dataFeedMskCrossAccount(Stack):
 
         #############       VPC Configurations      #############
 
-        availabilityZonesList = [parametersCrossAccount.az1, parametersCrossAccount.az2]
+        availabilityZonesList = [parameters.az1, parameters.az2]
         vpc = ec2.Vpc (self, "vpc",
-            vpc_name = f"{parametersCrossAccount.project}-{parametersCrossAccount.env}-{parametersCrossAccount.app}-vpc",
-            ip_addresses = ec2.IpAddresses.cidr(parametersCrossAccount.cidrRange),
-            enable_dns_hostnames = parametersCrossAccount.enableDnsHostnames,
-            enable_dns_support = parametersCrossAccount.enableDnsSupport,
+            vpc_name = f"{parameters.project}-{parameters.env}-{parameters.app}-vpc",
+            ip_addresses = ec2.IpAddresses.cidr(parameters.cidrRange),
+            enable_dns_hostnames = parameters.enableDnsHostnames,
+            enable_dns_support = parameters.enableDnsSupport,
             availability_zones = availabilityZonesList,
-            nat_gateways = parametersCrossAccount.numberOfNatGateways,
+            nat_gateways = parameters.numberOfNatGateways,
             subnet_configuration = [
                 {
-                    "name": f"{parametersCrossAccount.project}-{parametersCrossAccount.env}-{parametersCrossAccount.app}-publicSubnet1",
+                    "name": f"{parameters.project}-{parameters.env}-{parameters.app}-publicSubnet1",
                     "subnetType": ec2.SubnetType.PUBLIC,
-                    "cidrMask": parametersCrossAccount.cidrMaskForSubnets,
+                    "cidrMask": parameters.cidrMaskForSubnets,
                 },
                 {
-                    "name": f"{parametersCrossAccount.project}-{parametersCrossAccount.env}-{parametersCrossAccount.app}-privateSubnet1",
+                    "name": f"{parameters.project}-{parameters.env}-{parameters.app}-privateSubnet1",
                     "subnetType": ec2.SubnetType.PRIVATE_WITH_EGRESS,
-                    "cidrMask": parametersCrossAccount.cidrMaskForSubnets,
+                    "cidrMask": parameters.cidrMaskForSubnets,
                 }
             ]
         )
-        tags.of(vpc).add("name", f"{parametersCrossAccount.project}-{parametersCrossAccount.env}-{parametersCrossAccount.app}-vpc")
-        tags.of(vpc).add("project", parametersCrossAccount.project)
-        tags.of(vpc).add("env", parametersCrossAccount.env)
-        tags.of(vpc).add("app", parametersCrossAccount.app)
+        tags.of(vpc).add("name", f"{parameters.project}-{parameters.env}-{parameters.app}-vpc")
+        tags.of(vpc).add("project", parameters.project)
+        tags.of(vpc).add("env", parameters.env)
+        tags.of(vpc).add("app", parameters.app)
 
 #############       EC2 Key Pair Configurations      #############
 
-        keyPair = ec2.KeyPair.from_key_pair_name(self, "ec2KeyPair", parametersCrossAccount.keyPairName)
+        keyPair = ec2.KeyPair.from_key_pair_name(self, "ec2KeyPair", parameters.keyPairName)
 
         sgMskCluster = ec2.SecurityGroup(self, "sgMskCluster",
-            security_group_name = f"{parametersCrossAccount.project}-{parametersCrossAccount.env}-{parametersCrossAccount.app}-sgMskCluster",
+            security_group_name = f"{parameters.project}-{parameters.env}-{parameters.app}-sgMskCluster",
             vpc=vpc,
             description="Security group associated with the MSK Cluster",
             allow_all_outbound=True,
             disable_inline_rules=True
         )
-        tags.of(sgMskCluster).add("name", f"{parametersCrossAccount.project}-{parametersCrossAccount.env}-{parametersCrossAccount.app}-sgMskCluster")
-        tags.of(sgMskCluster).add("project", parametersCrossAccount.project)
-        tags.of(sgMskCluster).add("env", parametersCrossAccount.env)
-        tags.of(sgMskCluster).add("app", parametersCrossAccount.app)
+        tags.of(sgMskCluster).add("name", f"{parameters.project}-{parameters.env}-{parameters.app}-sgMskCluster")
+        tags.of(sgMskCluster).add("project", parameters.project)
+        tags.of(sgMskCluster).add("env", parameters.env)
+        tags.of(sgMskCluster).add("app", parameters.app)
 
-        sgEc2MskCluster = ec2.SecurityGroup(self, "sgEc2MskCluster",
-            security_group_name = f"{parametersCrossAccount.project}-{parametersCrossAccount.env}-{parametersCrossAccount.app}-sgEc2MskCluster",
+        sgConsumerEc2 = ec2.SecurityGroup(self, "sgConsumerEc2",
+            security_group_name = f"{parameters.project}-{parameters.env}-{parameters.app}-sgConsumerEc2",
             vpc=vpc,
             description="Security group associated with the EC2 instance of MSK Cluster",
             allow_all_outbound=True,
             disable_inline_rules=True
         )
-        tags.of(sgEc2MskCluster).add("name", f"{parametersCrossAccount.project}-{parametersCrossAccount.env}-{parametersCrossAccount.app}-sgEc2MskCluster")
-        tags.of(sgEc2MskCluster).add("project", parametersCrossAccount.project)
-        tags.of(sgEc2MskCluster).add("env", parametersCrossAccount.env)
-        tags.of(sgEc2MskCluster).add("app", parametersCrossAccount.app)
+        tags.of(sgConsumerEc2).add("name", f"{parameters.project}-{parameters.env}-{parameters.app}-sgConsumerEc2")
+        tags.of(sgConsumerEc2).add("project", parameters.project)
+        tags.of(sgConsumerEc2).add("env", parameters.env)
+        tags.of(sgConsumerEc2).add("app", parameters.app)
 
-        sgEc2MskCluster.add_ingress_rule(
+        sgConsumerEc2.add_ingress_rule(ec2.Peer.any_ipv4(), ec2.Port.tcp(22), "Allow SSH access from the internet")
+
+        sgConsumerEc2.add_ingress_rule(
             peer = ec2.Peer.security_group_id(sgMskCluster.security_group_id),
-            connection = ec2.Port.tcp_range(parametersCrossAccount.sgKafkaInboundPort, parametersCrossAccount.sgKafkaOutboundPort),
-            description = "Allow Custom TCP traffic from sgEc2MskCluster to sgMskCluster"
+            connection = ec2.Port.tcp_range(parameters.sgKafkaInboundPort, parameters.sgKafkaOutboundPort),
+            description = "Allow Custom TCP traffic from sgConsumerEc2 to sgMskCluster"
         )
 
         sgMskCluster.add_ingress_rule(
-            peer = ec2.Peer.security_group_id(sgEc2MskCluster.security_group_id),
-            connection = ec2.Port.tcp_range(parametersCrossAccount.sgMskClusterInboundPort, parametersCrossAccount.sgMskClusterOutboundPort),
-            description = "Allow all TCP traffic from sgEc2MskCluster to sgMskCluster"
+            peer = ec2.Peer.security_group_id(sgConsumerEc2.security_group_id),
+            connection = ec2.Port.tcp_range(parameters.sgMskClusterInboundPort, parameters.sgMskClusterOutboundPort),
+            description = "Allow all TCP traffic from sgConsumerEc2 to sgMskCluster"
         )
         sgMskCluster.add_ingress_rule(
             peer = ec2.Peer.security_group_id(sgMskCluster.security_group_id),
-            connection = ec2.Port.tcp_range(parametersCrossAccount.sgMskClusterInboundPort, parametersCrossAccount.sgMskClusterOutboundPort),
+            connection = ec2.Port.tcp_range(parameters.sgMskClusterInboundPort, parameters.sgMskClusterOutboundPort),
             description = "Allow all TCP traffic from sgMskCluster to sgMskCluster"
         )
 
-        sgEc2MskCluster.add_ingress_rule(ec2.Peer.any_ipv4(), ec2.Port.tcp(22), "Allow SSH access from the internet")
-
-        ec2MskClusterRole = iam.Role(self, "ec2MskClusterRole",
-            role_name = f"{parametersCrossAccount.project}-{parametersCrossAccount.env}-{parametersCrossAccount.app}-ec2MskClusterRole",
+        consumerEc2Role = iam.Role(self, "consumerEc2Role",
+            role_name = f"{parameters.project}-{parameters.env}-{parameters.app}-consumerEc2Role",
             assumed_by=iam.ServicePrincipal("ec2.amazonaws.com")
         )
-        tags.of(ec2MskClusterRole).add("name", f"{parametersCrossAccount.project}-{parametersCrossAccount.env}-{parametersCrossAccount.app}-ec2MskClusterRole")
-        tags.of(ec2MskClusterRole).add("project", parametersCrossAccount.project)
-        tags.of(ec2MskClusterRole).add("env", parametersCrossAccount.env)
-        tags.of(ec2MskClusterRole).add("app", parametersCrossAccount.app)
+        tags.of(consumerEc2Role).add("name", f"{parameters.project}-{parameters.env}-{parameters.app}-consumerEc2Role")
+        tags.of(consumerEc2Role).add("project", parameters.project)
+        tags.of(consumerEc2Role).add("env", parameters.env)
+        tags.of(consumerEc2Role).add("app", parameters.app)
 
-        ec2MskClusterRole.attach_inline_policy(
+        consumerEc2Role.attach_inline_policy(
             iam.Policy(self, 'ec2MskClusterPolicy',
                 statements = [
                     iam.PolicyStatement(
@@ -145,9 +145,9 @@ class dataFeedMskCrossAccount(Stack):
                             "kafka-cluster:DescribeGroup",
                             "kafka-cluster:DescribeClusterDynamicConfiguration",
                         ],
-                        resources= [parametersCrossAccount.mskClusterArn,
-                            f"arn:aws:kafka:{AWS.REGION}:{AWS.ACCOUNT_ID}:topic/{parametersCrossAccount.mskClusterName}/*/*",
-                            f"arn:aws:kafka:{AWS.REGION}:{AWS.ACCOUNT_ID}:group/{parametersCrossAccount.mskClusterName}/*/*"
+                        resources= [parameters.mskClusterArn,
+                            f"arn:aws:kafka:{AWS.REGION}:{AWS.ACCOUNT_ID}:topic/{parameters.mskClusterName}/*/*",
+                            f"arn:aws:kafka:{AWS.REGION}:{AWS.ACCOUNT_ID}:group/{parameters.mskClusterName}/*/*"
                         ]
                     ),
                     iam.PolicyStatement(
@@ -163,30 +163,34 @@ class dataFeedMskCrossAccount(Stack):
                             "s3:GetObject",
                             "s3:PutObject"
                         ],
-                        resources = [f"arn:aws:s3:::{parametersCrossAccount.s3BucketName}",
-                                    f"arn:aws:s3:::{parametersCrossAccount.s3BucketName}/*"
+                        resources = [f"arn:aws:s3:::{parameters.s3BucketName}",
+                                    f"arn:aws:s3:::{parameters.s3BucketName}/*"
                         ]
                     )
                 ]
             )
         )
-
+        
         kafkaClientEc2BlockDevices = ec2.BlockDevice(device_name="/dev/xvda", volume=ec2.BlockDeviceVolume.ebs(10))
-        kafkaClientEC2Instance = ec2.Instance(self, "kafkaClientEC2Instance",
-            instance_name = f"{parametersCrossAccount.project}-{parametersCrossAccount.env}-{parametersCrossAccount.app}-kafkaClientEC2Instance",
+        kafkaConsumerEC2Instance = ec2.Instance(self, "kafkaConsumerEC2Instance",
+            instance_name = f"{parameters.project}-{parameters.env}-{parameters.app}-kafkaConsumerEC2Instance",
             vpc = vpc,
-            instance_type = ec2.InstanceType.of(ec2.InstanceClass(parametersCrossAccount.ec2InstanceClass), ec2.InstanceSize(parametersCrossAccount.ec2InstanceSize)),
-            machine_image = ec2.AmazonLinuxImage(generation=ec2.AmazonLinuxGeneration.AMAZON_LINUX_2), #ec2.MachineImage().lookup(name = parametersCrossAccount.amiName),
+            instance_type = ec2.InstanceType.of(ec2.InstanceClass(parameters.ec2InstanceClass), ec2.InstanceSize(parameters.ec2InstanceSize)),
+            machine_image = ec2.AmazonLinuxImage(generation=ec2.AmazonLinuxGeneration.AMAZON_LINUX_2), #ec2.MachineImage().lookup(name = parameters.amiName),
             availability_zone = vpc.availability_zones[1],
             block_devices = [kafkaClientEc2BlockDevices],
             vpc_subnets = ec2.SubnetSelection(subnet_type=ec2.SubnetType.PUBLIC),
             key_pair = keyPair,
-            security_group = sgEc2MskCluster,
+            security_group = sgConsumerEc2,
             user_data = ec2.UserData.for_linux(),
-            role = ec2MskClusterRole
+            role = consumerEc2Role
         )
+        tags.of(kafkaConsumerEC2Instance).add("name", f"{parameters.project}-{parameters.env}-{parameters.app}-kafkaConsumerEC2Instance")
+        tags.of(kafkaConsumerEC2Instance).add("project", parameters.project)
+        tags.of(kafkaConsumerEC2Instance).add("env", parameters.env)
+        tags.of(kafkaConsumerEC2Instance).add("app", parameters.app)
 
-        kafkaClientEC2Instance.user_data.add_commands(
+        kafkaConsumerEC2Instance.user_data.add_commands(
             "sudo su",
             "sudo yum update -y",
             "sudo yum -y install java-11",
@@ -199,12 +203,11 @@ class dataFeedMskCrossAccount(Stack):
             "cat <<EOF > /home/ec2-user/users_jaas.conf",
             "KafkaClient {",
             f"    org.apache.kafka.common.security.scram.ScramLoginModule required",
-            f'    username="{parametersCrossAccount.username}"',
-            f'    password="{mskClusterPwdParamStoreValue}";',
+            f'    username="{parameters.mskClusterUsername}"',
+            f'    password="{parameters.mskClusterPwdParamStoreValue}";',
             "};",
             "EOF",
-            "export KAFKA_OPTS=-Djava.security.auth.login.config=/home/ec2-user/users_jaas.conf",
-            f"broker_url=$(aws kafka get-bootstrap-brokers --cluster-arn {parametersCrossAccount.mskClusterArn} --region {parametersCrossAccount.region}| jq -r '.BootstrapBrokerStringSaslScram')",
+            "echo 'export KAFKA_OPTS=-Djava.security.auth.login.config=/home/ec2-user/users_jaas.conf' >> ~/.bashrc",
             "mkdir tmp",
             "cp /usr/lib/jvm/java-11-amazon-corretto.x86_64/lib/security/cacerts /home/ec2-user/tmp/kafka.client.truststore.jks",
             "cat <<EOF > /home/ec2-user/client_sasl.properties",
@@ -212,18 +215,44 @@ class dataFeedMskCrossAccount(Stack):
             f"sasl.mechanism=SCRAM-SHA-512",
             f"ssl.truststore.location=/home/ec2-user/tmp/kafka.client.truststore.jks",
             "EOF",
-            f"/kafka_2.13-3.5.1/bin/kafka-topics.sh --bootstrap-server \"$broker_url\" --command-config /home/ec2-user/client_sasl.properties --create --topic {parametersCrossAccount.topic_name}"
-            # f"/kafka_2.13-3.5.1/bin/kafka-topics.sh --bootstrap-server \"$broker_url\" --list --command-config ./client_sasl.properties"
         )
     
         mskClusterVpcConnection = msk.CfnVpcConnection(self, "mskClusterVpcConnection",
             authentication="SASL_SCRAM",
             client_subnets=vpc.select_subnets(subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS).subnet_ids[:2],
             security_groups=[sgMskCluster.security_group_id],
-            target_cluster_arn=parametersCrossAccount.mskClusterArn,
+            target_cluster_arn=parameters.mskClusterArn,
             vpc_id=vpc.vpc_id
         )
-        tags.of(mskClusterVpcConnection).add("name", f"{parametersCrossAccount.project}-{parametersCrossAccount.env}-{parametersCrossAccount.app}-mskClusterVpcConnection")
-        tags.of(mskClusterVpcConnection).add("project", parametersCrossAccount.project)
-        tags.of(mskClusterVpcConnection).add("env", parametersCrossAccount.env)
-        tags.of(mskClusterVpcConnection).add("app", parametersCrossAccount.app)
+        tags.of(mskClusterVpcConnection).add("name", f"{parameters.project}-{parameters.env}-{parameters.app}-mskClusterVpcConnection")
+        tags.of(mskClusterVpcConnection).add("project", parameters.project)
+        tags.of(mskClusterVpcConnection).add("env", parameters.env)
+        tags.of(mskClusterVpcConnection).add("app", parameters.app)
+
+#############       Output Values      #############
+
+        CfnOutput(self, "vpcId",
+            value = vpc.vpc_id,
+            description = "VPC Id",
+            export_name = f"{parameters.project}-{parameters.env}-{parameters.app}-vpcId"
+        )
+        CfnOutput(self, "sgMskClusterId",
+            value = sgMskCluster.security_group_id,
+            description = "Security group ID of the MSK cluster attached to mskClusterVpcConnection",
+            export_name = f"{parameters.project}-{parameters.env}-{parameters.app}-sgMskClusterId"
+        )
+        CfnOutput(self, "sgConsumerEc2Id",
+            value = sgConsumerEc2.security_group_id,
+            description = "Security group ID of the EC2 consumer for the MSK cluster",
+            export_name = f"{parameters.project}-{parameters.env}-{parameters.app}-sgConsumerEc2Id"
+        )
+        CfnOutput(self, "consumerEc2RoleArn",
+            value = consumerEc2Role.role_arn,
+            description = "ARN of EC2 MSK cluster role",
+            export_name = f"{parameters.project}-{parameters.env}-{parameters.app}-consumerEc2RoleArn"
+        )
+        CfnOutput(self, "kafkaConsumerEC2InstanceId",
+            value = kafkaConsumerEC2Instance.instance_id,
+            description = "Kafka client EC2 instance Id",
+            export_name = f"{parameters.project}-{parameters.env}-{parameters.app}-kafkaConsumerEC2InstanceId"
+        )

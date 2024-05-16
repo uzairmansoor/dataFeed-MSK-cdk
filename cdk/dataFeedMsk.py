@@ -155,6 +155,10 @@ class dataFeedMsk(Stack):
             ),
             encryption_key=customerManagedKey
         )
+        tags.of(mskClusterSecrets).add("name", f"{parameters.project}-{parameters.env}-{parameters.app}-mskClusterSecrets")
+        tags.of(mskClusterSecrets).add("project", parameters.project)
+        tags.of(mskClusterSecrets).add("env", parameters.env)
+        tags.of(mskClusterSecrets).add("app", parameters.app)
         mskClusterPasswordSecretValue = mskClusterSecrets.secret_value_from_json("password").unsafe_unwrap()
 
         openSearchSecrets = secretsmanager.Secret(self, "openSearchSecrets",
@@ -163,6 +167,10 @@ class dataFeedMsk(Stack):
             generate_secret_string = secretsmanager.SecretStringGenerator(),
             encryption_key = customerManagedKey
         )
+        tags.of(openSearchSecrets).add("name", f"{parameters.project}-{parameters.env}-{parameters.app}-openSearchSecrets")
+        tags.of(openSearchSecrets).add("project", parameters.project)
+        tags.of(openSearchSecrets).add("env", parameters.env)
+        tags.of(openSearchSecrets).add("app", parameters.app)
         openSearchMasterPasswordSecretValue = openSearchSecrets.secret_value
         openSearchMasterPassword = openSearchMasterPasswordSecretValue.unsafe_unwrap()
 
@@ -173,6 +181,10 @@ class dataFeedMsk(Stack):
             string_value = mskClusterPasswordSecretValue,
             tier = ssm.ParameterTier.STANDARD
         )
+        tags.of(mskClusterPwdParamStore).add("name", f"{parameters.project}-{parameters.env}-{parameters.app}-mskClusterPwdParamStore")
+        tags.of(mskClusterPwdParamStore).add("project", parameters.project)
+        tags.of(mskClusterPwdParamStore).add("env", parameters.env)
+        tags.of(mskClusterPwdParamStore).add("app", parameters.app)
         mskClusterPwdParamStoreValue = mskClusterPwdParamStore.string_value
 
 #############       Logs of MSK and Apache flink Configurations      #############
@@ -182,18 +194,30 @@ class dataFeedMsk(Stack):
             retention = logs.RetentionDays.ONE_WEEK,
             removal_policy = RemovalPolicy.DESTROY
         )
+        tags.of(mskClusterLogGroup).add("name", f"{parameters.project}-{parameters.env}-{parameters.app}-mskClusterLogGroup")
+        tags.of(mskClusterLogGroup).add("project", parameters.project)
+        tags.of(mskClusterLogGroup).add("env", parameters.env)
+        tags.of(mskClusterLogGroup).add("app", parameters.app)
 
         apacheFlinkAppLogGroup = logs.LogGroup(self, "apacheFlinkAppLogGroup",
             log_group_name = f"{parameters.project}-{parameters.env}-{parameters.app}-flinkAppLogGroup",
             retention = logs.RetentionDays.ONE_WEEK,
             removal_policy = RemovalPolicy.DESTROY
         )
+        tags.of(apacheFlinkAppLogGroup).add("name", f"{parameters.project}-{parameters.env}-{parameters.app}-apacheFlinkAppLogGroup")
+        tags.of(apacheFlinkAppLogGroup).add("project", parameters.project)
+        tags.of(apacheFlinkAppLogGroup).add("env", parameters.env)
+        tags.of(apacheFlinkAppLogGroup).add("app", parameters.app)
         
         apacheFlinkAppLogStream = logs.LogStream(self, "apacheFlinkAppLogStream",
             log_stream_name = f"{parameters.project}-{parameters.env}-{parameters.app}-flinkAppLogStream",
             log_group = logs.LogGroup.from_log_group_name(self, "importLogGroupName", log_group_name = apacheFlinkAppLogGroup.log_group_name),
             removal_policy = RemovalPolicy.DESTROY
         )
+        tags.of(apacheFlinkAppLogStream).add("name", f"{parameters.project}-{parameters.env}-{parameters.app}-apacheFlinkAppLogStream")
+        tags.of(apacheFlinkAppLogStream).add("project", parameters.project)
+        tags.of(apacheFlinkAppLogStream).add("env", parameters.env)
+        tags.of(apacheFlinkAppLogStream).add("app", parameters.app)
 
 #############       MSK Cluster Configurations      #############
 
@@ -276,6 +300,10 @@ class dataFeedMsk(Stack):
             string_value = mskCluster.attr_arn,
             tier = ssm.ParameterTier.STANDARD
         )
+        tags.of(mskClusterArnParamStore).add("name", f"{parameters.project}-{parameters.env}-{parameters.app}-mskClusterArnParamStore")
+        tags.of(mskClusterArnParamStore).add("project", parameters.project)
+        tags.of(mskClusterArnParamStore).add("env", parameters.env)
+        tags.of(mskClusterArnParamStore).add("app", parameters.app)
         mskClusterArnParamStoreValue = mskClusterArnParamStore.string_value
 
         mskClusterBrokerUrlParamStore = ssm.StringParameter(self, "mskClusterBrokerUrlParamStore",
@@ -283,6 +311,10 @@ class dataFeedMsk(Stack):
             string_value = "dummy",         # We're passing a dummy value in this SSM parameter. The actual value will be replaced by EC2 userdata during the process
             tier = ssm.ParameterTier.STANDARD
         )
+        tags.of(mskClusterBrokerUrlParamStore).add("name", f"{parameters.project}-{parameters.env}-{parameters.app}-mskClusterBrokerUrlParamStore")
+        tags.of(mskClusterBrokerUrlParamStore).add("project", parameters.project)
+        tags.of(mskClusterBrokerUrlParamStore).add("env", parameters.env)
+        tags.of(mskClusterBrokerUrlParamStore).add("app", parameters.app)
 
 #We are unable to activate the SASL/SCRAM authentication method for client authentication during the cluster creation process
         enableSaslScramClientAuth = parameters.enableSaslScramClientAuth
@@ -525,6 +557,10 @@ class dataFeedMsk(Stack):
             user_data = ec2.UserData.for_linux(),
             role = ec2MskClusterRole
         )
+        tags.of(kafkaClientEC2Instance).add("name", f"{parameters.project}-{parameters.env}-{parameters.app}-kafkaClientEC2Instance")
+        tags.of(kafkaClientEC2Instance).add("project", parameters.project)
+        tags.of(kafkaClientEC2Instance).add("env", parameters.env)
+        tags.of(kafkaClientEC2Instance).add("app", parameters.app)
 
         kafkaClientEC2Instance.user_data.add_commands(
             "sudo su",
@@ -554,7 +590,8 @@ class dataFeedMsk(Stack):
             f"sasl.mechanism=SCRAM-SHA-512",
             f"ssl.truststore.location=/home/ec2-user/tmp/kafka.client.truststore.jks",
             "EOF",
-            f"/kafka/kafka_2.13-3.5.1/bin/kafka-acls.sh --authorizer-properties zookeeper.connect=$ZOOKEEPER_CONNECTION --add --allow-principal User:{parameters.mskClusterUsername} --operation Read --topic '*' --group '*'",
+            f"/kafka_2.13-3.5.1/bin/kafka-acls.sh --authorizer-properties zookeeper.connect=$ZOOKEEPER_CONNECTION --add --allow-principal User:{parameters.mskClusterUsername} --operation Read Write --topic '*'",
+            f"/kafka_2.13-3.5.1/bin/kafka-acls.sh --authorizer-properties zookeeper.connect=$ZOOKEEPER_CONNECTION --add --allow-principal User:{parameters.mskClusterUsername} --operation Read --group '*'",
             f'/kafka_2.13-3.5.1/bin/kafka-topics.sh --bootstrap-server $BOOTSTRAP_SERVERS --command-config /home/ec2-user/client_sasl.properties --create --topic {parameters.mskTopicName1} --replication-factor 2',
             f'/kafka_2.13-3.5.1/bin/kafka-topics.sh --bootstrap-server $BOOTSTRAP_SERVERS --command-config /home/ec2-user/client_sasl.properties --create --topic {parameters.mskTopicName2} --replication-factor 2',
             f'/kafka_2.13-3.5.1/bin/kafka-topics.sh --bootstrap-server $BOOTSTRAP_SERVERS --command-config /home/ec2-user/client_sasl.properties --create --topic {parameters.mskTopicName3} --replication-factor 2',
@@ -578,59 +615,9 @@ class dataFeedMsk(Stack):
             'export SECRET_KEY=AFHK20nUtVfmiTfuMTUV51OJe4YaQybUSbAs7o02',
             'export KAFKA_SASL_MECHANISM=SCRAM-SHA-512',
             f'export KAFKA_SASL_USERNAME={parameters.mskClusterUsername}',
-            f'export KAFKA_SASL_PASSWORD={mskClusterPwdParamStoreValue}',
-            "python3 ec2-script-historic-para.py"
+            f'export KAFKA_SASL_PASSWORD={mskClusterPwdParamStoreValue}'
+            # "python3 ec2-script-historic-para.py"
         )
-
-#############       Overriding some properties of MSK cluster      #############
-
-#############       2nd Iteration      #############
-
-        # mskCluster.add_property_override(
-        #     'BrokerNodeGroupInfo.ConnectivityInfo',
-        #     {
-        #         'VpcConnectivity': {
-        #             'ClientAuthentication': {
-        #                 'Sasl': {
-        #                     'Iam': {'Enabled': False},
-        #                     'Scram': {'Enabled': True}
-        #                 },
-        #                 'Tls': {'Enabled': False}
-        #             }
-        #         }
-        #     }
-        # )
-
-        # mskCluster.add_property_override(
-        #     'ConfigurationInfo',
-        #     {
-        #         "arn": mskClusterConfiguration.attr_arn,
-        #         "revision": mskClusterConfiguration.attr_latest_revision_revision
-        #     }
-        # )
-        
-        # mskClusterPolicy = msk.CfnClusterPolicy(self, "mskClusterPolicy",
-        #     cluster_arn=mskClusterArnParamStoreValue,
-        #     policy={
-        #         "Version": "2012-10-17",
-        #         "Statement": [
-        #             {
-        #                 "Effect": "Allow",
-        #                 "Principal": {
-        #                     "AWS": [parameters.mskCrossAccountId]
-        #                 },
-        #                 "Action": [
-        #                     "kafka:CreateVpcConnection",
-        #                     "kafka:GetBootstrapBrokers",
-        #                     "kafka:DescribeCluster",
-        #                     "kafka:DescribeClusterV2"
-        #                 ],
-        #                 "Resource": mskClusterArnParamStoreValue
-        #             }
-        #         ]
-        #     }
-        # )
-        # mskClusterPolicy.node.add_dependency(mskCluster)
 
 #############       OpenSearch Configurations      #############
 
@@ -667,6 +654,10 @@ class dataFeedMsk(Stack):
             removal_policy = RemovalPolicy.DESTROY
         )
         openSearchDomain.node.add_dependency(kafkaClientEC2Instance)
+        tags.of(openSearchDomain).add("name", f"{parameters.project}-{parameters.env}-{parameters.app}-openSearchDomain")
+        tags.of(openSearchDomain).add("project", parameters.project)
+        tags.of(openSearchDomain).add("env", parameters.env)
+        tags.of(openSearchDomain).add("app", parameters.app)
 
 #############       Apache Flink Configurations      #############
 
@@ -783,11 +774,6 @@ class dataFeedMsk(Stack):
             description = "ARN of apache flink app role",
             export_name = f"{parameters.project}-{parameters.env}-{parameters.app}-apacheFlinkAppRoleArn"
         )
-        # CfnOutput(self, "kafkaProducerEC2InstanceId",
-        #     value = kafkaProducerEC2Instance.instance_id,
-        #     description = "Kafka producer EC2 instance Id",
-        #     export_name = f"{parameters.project}-{parameters.env}-{parameters.app}-kafkaProducerEC2InstanceId"
-        # )
         CfnOutput(self, "kafkaClientEC2InstanceId",
             value = kafkaClientEC2Instance.instance_id,
             description = "Kafka client EC2 instance Id",

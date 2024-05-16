@@ -82,3 +82,9 @@ eventTickerIntervalMinutes = "1"                    #Interval in minutes for eve
 enableSaslScramClientAuth = True
 enableClusterConfig = True
 enableClusterPolicy = True
+
+###     Cross Account Parameters    ###
+
+mskClusterArn = "arn:aws:kafka:us-east-1:095773313313:cluster/awsblog-dev-app-mskCluster/26990eab-5022-4ce5-9c91-5f6ec176a4b5-24"
+mskClusterName = f'{project}-{env}-{app}-mskCluster'
+mskClusterPwdParamStoreValue = "iGFWqAJhYfFKgrDavHIUeYViMbYBWI4V"

@@ -9,33 +9,26 @@ from aws_cdk import (
 from cdk.dataFeedMsk import dataFeedMsk
 from cdk import parameters
 
-# from cdk.dataFeedMskCrossAccount import dataFeedMskCrossAccount
-# from cdk import parametersCrossAccount
+from cdk.dataFeedMskCrossAccount import dataFeedMskCrossAccount
 
 # from cdk.dataFeedMsk_copy import dataFeedMsk
 # # from cdk.importMskCluster_copy import importMskCluster
 # from cdk import parameters_copy
-                                                        #### 1 #### env-qa, 10.20.0.0
-app = cdk.App()
-
-aws_env = cdk.Environment(account=os.environ["CDK_DEFAULT_ACCOUNT"], region=os.environ["CDK_DEFAULT_REGION"])
-dataFeedMsk(app, f"{parameters.project}-{parameters.env}-{parameters.app}-dataFeedMskAwsBlogStack", env=aws_env)
-
-app.synth()
-                                                        #### 2 #### env-dev, 10.30.0.0, azCodes, keyPair
+                                                        
 # app = cdk.App()
 
-# aws_env = cdk.Environment(account=os.environ["CDK_DEFAULT_ACCOUNT"], region="us-east-2")
+# aws_env = cdk.Environment(account=os.environ["CDK_DEFAULT_ACCOUNT"], region=os.environ["CDK_DEFAULT_REGION"])
+
 # dataFeedMsk(app, f"{parameters.project}-{parameters.env}-{parameters.app}-dataFeedMskAwsBlogStack", env=aws_env)
 
 # app.synth()
 
-# app = cdk.App()
+app = cdk.App()
 
-# awsEnvCrossAccount = cdk.Environment(account=os.environ["CDK_DEFAULT_ACCOUNT"], region=os.environ["CDK_DEFAULT_REGION"])
-# dataFeedMskCrossAccount(app, f"{parametersCrossAccount.project}-{parametersCrossAccount.env}-{parametersCrossAccount.app}-dataFeedMskCrossAccount", env=awsEnvCrossAccount)
+awsEnvCrossAccount = cdk.Environment(account=os.environ["CDK_DEFAULT_ACCOUNT"], region=os.environ["CDK_DEFAULT_REGION"])
+dataFeedMskCrossAccount(app, f"{parameters.project}-{parameters.env}-{parameters.app}-dataFeedMskCrossAccount", env=awsEnvCrossAccount)
 
-# app.synth()
+app.synth()
 
 # app = cdk.App()
 
