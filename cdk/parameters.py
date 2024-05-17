@@ -31,7 +31,8 @@ sourceBucketName = "kafka-flink-blog-bucket"
 
 ###   Secrets Manager Parameters   ###
 
-mskClusterUsername = "uzair"        #Username for MSK Cluster
+mskClientUsername = "netsol"        #Username for MSK Cluster
+mskCustomerUsername = "customer"
 
 ###   MSK Kafka Parameters   ###
 
@@ -85,6 +86,6 @@ enableClusterPolicy = True
 
 ###     Cross Account Parameters    ###
 
-mskClusterArn = "arn:aws:kafka:us-east-1:095773313313:cluster/awsblog-dev-app-mskCluster/26990eab-5022-4ce5-9c91-5f6ec176a4b5-24"
+mskClusterArn = "arn:aws:kafka:us-east-1:095773313313:cluster/awsblog-dev-app-mskCluster/44cbaad8-6d57-4fe0-b987-cfd277abb792-24"
 mskClusterName = f'{project}-{env}-{app}-mskCluster'
-mskClusterPwdParamStoreValue = "iGFWqAJhYfFKgrDavHIUeYViMbYBWI4V"
+mskCustomerPwdParamStoreValue = "cZfv0aSHGueCuLt2bQfvRCHtPWXLjyRi"
