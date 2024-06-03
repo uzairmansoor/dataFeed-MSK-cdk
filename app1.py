@@ -17,4 +17,3 @@ aws_env = cdk.Environment(account=os.environ["CDK_DEFAULT_ACCOUNT"], region=os.e
 dataFeedMsk(app, f"{parameters.project}-{parameters.env}-{parameters.app}-dataFeedMskAwsBlogStack", env=aws_env)
 
 app.synth()
-
