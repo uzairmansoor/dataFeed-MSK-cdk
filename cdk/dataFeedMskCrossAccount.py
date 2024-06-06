@@ -28,7 +28,12 @@ class dataFeedMskCrossAccount(Stack):
 
         #############       VPC Configurations      #############
 
-        availabilityZonesList = [parameters.az1, parameters.az2]
+        # availability_zones = {
+        #     'us-east-1a': 'use1-az4',  # Cross account AZ for use1-az4
+        #     'us-east-1b': 'use1-az6'   # Cross account AZ for use1-az6
+        # }
+
+        availabilityZonesList = [parameters.crossAccountAz1, parameters.crossAccountAz2]
         vpc = ec2.Vpc (self, "vpc",
             vpc_name = f"{parameters.project}-{parameters.env}-{parameters.app}-vpc",
             ip_addresses = ec2.IpAddresses.cidr(parameters.cidrRange),
@@ -41,11 +46,13 @@ class dataFeedMskCrossAccount(Stack):
                     "name": f"{parameters.project}-{parameters.env}-{parameters.app}-publicSubnet1",
                     "subnetType": ec2.SubnetType.PUBLIC,
                     "cidrMask": parameters.cidrMaskForSubnets,
+                    # "availability_zone": availability_zones['us-east-1a']
                 },
                 {
                     "name": f"{parameters.project}-{parameters.env}-{parameters.app}-privateSubnet1",
                     "subnetType": ec2.SubnetType.PRIVATE_WITH_EGRESS,
                     "cidrMask": parameters.cidrMaskForSubnets,
+                    # "availability_zone": availability_zones['us-east-1b']
                 }
             ]
         )
@@ -224,6 +231,8 @@ class dataFeedMskCrossAccount(Stack):
             target_cluster_arn=parameters.mskClusterArn,
             vpc_id=vpc.vpc_id
         )
+        mskClusterVpcConnection.node.add_dependency(vpc)
+        mskClusterVpcConnection.node.add_dependency(sgMskCluster)
         tags.of(mskClusterVpcConnection).add("name", f"{parameters.project}-{parameters.env}-{parameters.app}-mskClusterVpcConnection")
         tags.of(mskClusterVpcConnection).add("project", parameters.project)
         tags.of(mskClusterVpcConnection).add("env", parameters.env)

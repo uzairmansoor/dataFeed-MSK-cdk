@@ -343,6 +343,17 @@ class dataFeedMsk(Stack):
         tags.of(mskClusterBrokerUrlParamStore).add("env", parameters.env)
         tags.of(mskClusterBrokerUrlParamStore).add("app", parameters.app)
 
+        getAzIdsParamStore = ssm.StringParameter(self, "getAzIdsParamStore",
+                parameter_name = f"blogAws-{parameters.env}-getAzIdsParamStore-ssmParamStore",
+                string_value = "dummy",         # We're passing a dummy value in this SSM parameter. The actual value will be replaced by EC2 userdata during the process
+                tier = ssm.ParameterTier.STANDARD,
+                type = ssm.ParameterType.STRING_LIST
+            )
+        tags.of(getAzIdsParamStore).add("name", f"{parameters.project}-{parameters.env}-{parameters.app}-getAzIdsParamStore")
+        tags.of(getAzIdsParamStore).add("project", parameters.project)
+        tags.of(getAzIdsParamStore).add("env", parameters.env)
+        tags.of(getAzIdsParamStore).add("app", parameters.app)
+
 #We are unable to activate the SASL/SCRAM authentication method for client authentication during the cluster creation process
         enableSaslScramClientAuth = parameters.enableSaslScramClientAuth
         if enableSaslScramClientAuth:
@@ -458,6 +469,13 @@ class dataFeedMsk(Stack):
                     iam.PolicyStatement(
                         effect = iam.Effect.ALLOW,
                         actions=[
+                            "ec2:DescribeSubnets"
+                        ],
+                        resources= ["*"]
+                    ),
+                    iam.PolicyStatement(
+                        effect = iam.Effect.ALLOW,
+                        actions=[
                             "kafka:GetBootstrapBrokers"
                         ],
                         resources= ["*"]
@@ -490,7 +508,9 @@ class dataFeedMsk(Stack):
                             "ssm:GetParameters",
                             "ssm:GetParameter"
                         ],
-                        resources= [f"arn:aws:ssm:{AWS.REGION}:{AWS.ACCOUNT_ID}:parameter/{mskClusterBrokerUrlParamStore.parameter_name}"]
+                        resources= [f"arn:aws:ssm:{AWS.REGION}:{AWS.ACCOUNT_ID}:parameter/{mskClusterBrokerUrlParamStore.parameter_name}",
+                                    f"arn:aws:ssm:{AWS.REGION}:{AWS.ACCOUNT_ID}:parameter/{getAzIdsParamStore.parameter_name}"
+                                    ]
                     )
                 ]
             )
@@ -617,6 +637,8 @@ class dataFeedMsk(Stack):
             f"sasl.mechanism=SCRAM-SHA-512",
             f"ssl.truststore.location=/home/ec2-user/tmp/kafka.client.truststore.jks",
             "EOF",
+            f"export AZ_IDS=$(aws ec2 describe-subnets --filters 'Name=vpc-id,Values={vpc.vpc_id}' --region {AWS.REGION} | jq -r '.Subnets[].AvailabilityZoneId' | tr '\n' ',')",
+            f'aws ssm put-parameter --name {getAzIdsParamStore.parameter_name} --value "$AZ_IDS" --type "{getAzIdsParamStore.parameter_type}" --overwrite --region {AWS.REGION}',
             f"/kafka_2.13-3.5.1/bin/kafka-acls.sh --authorizer-properties zookeeper.connect=$ZOOKEEPER_CONNECTION --add --allow-principal User:{parameters.mskClientUsername} --operation Read --topic '*'",
             f"/kafka_2.13-3.5.1/bin/kafka-acls.sh --authorizer-properties zookeeper.connect=$ZOOKEEPER_CONNECTION --add --allow-principal User:{parameters.mskClientUsername} --operation Write --topic '*'",
             f"/kafka_2.13-3.5.1/bin/kafka-acls.sh --authorizer-properties zookeeper.connect=$ZOOKEEPER_CONNECTION --add --allow-principal User:{parameters.mskClientUsername} --operation Read --group '*'",

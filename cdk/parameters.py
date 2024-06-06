@@ -26,8 +26,7 @@ crossAccountVpcCidrRange = "10.20.0.0/16"   #Cross Account IPv4 CIDR range for V
 
 ###   S3 Bucket Parameters   ###
 
-s3BucketName = "awsblog-dev-app-us-east-1-095773313313"     #Name of S3 Bucket for Storing Code and Artifacts
-sourceBucketName = "kafka-flink-blog-bucket"
+s3BucketName = "awsblog-dev-app-us-east-1-546268160168-1" #"awsblog-dev-app-us-east-1-095773313313"     #Name of S3 Bucket for Storing Code and Artifacts
 
 ###   Secrets Manager Parameters   ###
 
@@ -80,12 +79,14 @@ openSearchAvailabilityZoneEnable = True             #Enable deployment of OpenSe
 eventTickerIntervalMinutes = "1"                    #Interval in minutes for event ticker
 
 ###   userInput   ###
-enableSaslScramClientAuth = False
-enableClusterConfig = False
-enableClusterPolicy = False
+enableSaslScramClientAuth = True
+enableClusterConfig = True
+enableClusterPolicy = True
 
 ###     Cross Account Parameters    ###
 
-mskClusterArn = "arn:aws:kafka:us-east-1:095773313313:cluster/awsblog-dev-app-mskCluster/44cbaad8-6d57-4fe0-b987-cfd277abb792-24"
+mskClusterArn = "arn:aws:kafka:us-east-1:546268160168:cluster/awsblog-dev-app-mskCluster/752b68e1-0ff7-429a-b1b4-bcbf4cd8dbd2-21"
 mskClusterName = f'{project}-{env}-{app}-mskCluster'
-mskCustomerPwdParamStoreValue = "cZfv0aSHGueCuLt2bQfvRCHtPWXLjyRi"
+mskCustomerPwdParamStoreValue = "1wB9OvtfxX4v6SSkfMqN646d2j20DbCK"
+crossAccountAz1 = "us-east-1b"
+crossAccountAz2 = "us-east-1c"
