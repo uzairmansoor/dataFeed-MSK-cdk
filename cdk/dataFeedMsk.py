@@ -662,15 +662,13 @@ class dataFeedMsk(Stack):
             "sudo python3 -m virtualenv alpaca-script",
             "source alpaca-script/bin/activate",
             f"pip install -r <(aws s3 cp s3://{bucket.bucket_name}/python-scripts/requirement.txt -)",
-            f"aws s3 cp s3://{bucket.bucket_name}/python-scripts/ec2-script-historic-para.py .",
-            f"aws s3 cp s3://{bucket.bucket_name}/python-scripts/stock_mapper.py .",
             f"aws s3 cp s3://{bucket.bucket_name}/python-scripts/ec2-script-live.py .",
             "echo 'export API_KEY=PKECLY5H0GVN02PAODUC' >> ~/.bashrc",
             "echo 'export SECRET_KEY=AFHK20nUtVfmiTfuMTUV51OJe4YaQybUSbAs7o02' >> ~/.bashrc",
             "echo 'export KAFKA_SASL_MECHANISM=SCRAM-SHA-512' >> ~/.bashrc",
             f"echo 'export KAFKA_SASL_USERNAME={parameters.mskClientUsername}' >> ~/.bashrc",
             f"echo 'export KAFKA_SASL_PASSWORD={mskClientPwdParamStoreValue}' >> ~/.bashrc",
-            # "python3 ec2-script-historic-para.py"
+                # "python3 ec2-script-historic-para.py"
         )
 
 #############       OpenSearch Configurations      #############
