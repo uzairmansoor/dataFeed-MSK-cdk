@@ -180,7 +180,11 @@ class dataFeedMsk(Stack):
         openSearchSecrets = secretsmanager.Secret(self, "openSearchSecrets",
             description = "Secrets for OpenSearch",
             secret_name = f"{parameters.project}-{parameters.env}-{parameters.app}-openSearchSecrets",
-            generate_secret_string = secretsmanager.SecretStringGenerator(),
+            generate_secret_string = secretsmanager.SecretStringGenerator(
+                generate_string_key = "password",
+                secret_string_template = '{"username": "%s"}' % parameters.openSearchMasterUsername,
+                exclude_punctuation = True
+            ),
             encryption_key = customerManagedKey
         )
         tags.of(openSearchSecrets).add("name", f"{parameters.project}-{parameters.env}-{parameters.app}-openSearchSecrets")
@@ -626,9 +630,9 @@ class dataFeedMsk(Stack):
             f'    password="{mskClientPwdParamStoreValue}";',
             "};",
             "EOF",
-            "export KAFKA_OPTS=-Djava.security.auth.login.config=/home/ec2-user/users_jaas.conf",
-            f"export BOOTSTRAP_SERVERS=$(aws kafka get-bootstrap-brokers --cluster-arn {mskCluster.attr_arn} --region {AWS.REGION} | jq -r \'.BootstrapBrokerStringSaslScram\')",
-            f"export ZOOKEEPER_CONNECTION=$(aws kafka describe-cluster --cluster-arn {mskCluster.attr_arn} --region {AWS.REGION} | jq -r \'.ClusterInfo.ZookeeperConnectString\')",
+            f"echo 'export KAFKA_OPTS=-Djava.security.auth.login.config=/home/ec2-user/users_jaas.conf'  >> ~/.bashrc",
+            f"echo 'export BOOTSTRAP_SERVERS=$(aws kafka get-bootstrap-brokers --cluster-arn {mskCluster.attr_arn} --region {AWS.REGION} | jq -r \'.BootstrapBrokerStringSaslScram\')' >> ~/.bashrc",
+            f"echo 'export ZOOKEEPER_CONNECTION=$(aws kafka describe-cluster --cluster-arn {mskCluster.attr_arn} --region {AWS.REGION} | jq -r \'.ClusterInfo.ZookeeperConnectString\')' >> ~/.bashrc",
             f'aws ssm put-parameter --name {mskClusterBrokerUrlParamStore.parameter_name} --value "$BOOTSTRAP_SERVERS" --type "{mskClusterBrokerUrlParamStore.parameter_type}" --overwrite --region {AWS.REGION}',
             "mkdir tmp",
             "cp /usr/lib/jvm/java-11-amazon-corretto.x86_64/lib/security/cacerts /home/ec2-user/tmp/kafka.client.truststore.jks",
@@ -637,7 +641,7 @@ class dataFeedMsk(Stack):
             f"sasl.mechanism=SCRAM-SHA-512",
             f"ssl.truststore.location=/home/ec2-user/tmp/kafka.client.truststore.jks",
             "EOF",
-            f"export AZ_IDS=$(aws ec2 describe-subnets --filters 'Name=vpc-id,Values={vpc.vpc_id}' --region {AWS.REGION} | jq -r '.Subnets[].AvailabilityZoneId' | tr '\n' ',')",
+            f"echo 'export AZ_IDS=$(aws ec2 describe-subnets --filters \"Name=vpc-id,Values={vpc.vpc_id}\" --region {AWS.REGION} | jq -r \'.Subnets[].AvailabilityZoneId\' | sort -u | tr \"\\n\" \",\")' >> ~/.bashrc",
             f'aws ssm put-parameter --name {getAzIdsParamStore.parameter_name} --value "$AZ_IDS" --type "{getAzIdsParamStore.parameter_type}" --overwrite --region {AWS.REGION}',
             f"/kafka_2.13-3.5.1/bin/kafka-acls.sh --authorizer-properties zookeeper.connect=$ZOOKEEPER_CONNECTION --add --allow-principal User:{parameters.mskClientUsername} --operation Read --topic '*'",
             f"/kafka_2.13-3.5.1/bin/kafka-acls.sh --authorizer-properties zookeeper.connect=$ZOOKEEPER_CONNECTION --add --allow-principal User:{parameters.mskClientUsername} --operation Write --topic '*'",
@@ -664,12 +668,12 @@ class dataFeedMsk(Stack):
             f"aws s3 cp s3://{bucket.bucket_name}/python-scripts/ec2-script-historic-para.py .",
             f"aws s3 cp s3://{bucket.bucket_name}/python-scripts/stock_mapper.py .",
             f"aws s3 cp s3://{bucket.bucket_name}/python-scripts/ec2-script-live.py .",
-            'export API_KEY=PKECLY5H0GVN02PAODUC',
-            'export SECRET_KEY=AFHK20nUtVfmiTfuMTUV51OJe4YaQybUSbAs7o02',
-            'export KAFKA_SASL_MECHANISM=SCRAM-SHA-512',
-            f'export KAFKA_SASL_USERNAME={parameters.mskClientUsername}',
-            f'export KAFKA_SASL_PASSWORD={mskClientPwdParamStoreValue}'
-            # "python3 ec2-script-historic-para.py"
+            "echo 'export API_KEY=PKECLY5H0GVN02PAODUC' >> ~/.bashrc",
+            "echo 'export SECRET_KEY=AFHK20nUtVfmiTfuMTUV51OJe4YaQybUSbAs7o02' >> ~/.bashrc",
+            "echo 'export KAFKA_SASL_MECHANISM=SCRAM-SHA-512' >> ~/.bashrc",
+            f"echo 'export KAFKA_SASL_USERNAME={parameters.mskClientUsername}' >> ~/.bashrc",
+            f"echo 'export KAFKA_SASL_PASSWORD={mskClientPwdParamStoreValue}' >> ~/.bashrc",
+            # "python3 ec2-script-live.py TSLA GOOGL"
         )
 
 #############       OpenSearch Configurations      #############

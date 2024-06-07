@@ -47,7 +47,7 @@ mskTopicName1 = "googl"                     #Name of the first MSK topic
 mskTopicName2 = "tsla"                      #Name of the second MSK topic
 mskTopicName3 = "googlenhanced"             #Name of the third MSK topic
 mskTopicName4 = "teslenhanced"              #Name of the fourth MSK topic
-mskCrossAccountId = "007756798683"          #Cross Account ID for MSK
+mskCrossAccountId = "576737476547"          #Cross Account ID for MSK
 
 ###   MSK Client EC2 Instance Parameters   ### 
 
@@ -79,14 +79,14 @@ openSearchAvailabilityZoneEnable = True             #Enable deployment of OpenSe
 eventTickerIntervalMinutes = "1"                    #Interval in minutes for event ticker
 
 ###   userInput   ###
-enableSaslScramClientAuth = True
-enableClusterConfig = True
-enableClusterPolicy = True
+enableSaslScramClientAuth = False       #In the first iteration, disable SASL/SCRAM client authentication, and in the second iteration, enable it.
+enableClusterConfig = False             #In the first iteration, disable cluster configuration, and in the second iteration, enable it
+enableClusterPolicy = False             #In the first iteration, disable cluster policy, and in the second iteration, enable it
 
 ###     Cross Account Parameters    ###
 
-mskClusterArn = "arn:aws:kafka:us-east-1:546268160168:cluster/awsblog-dev-app-mskCluster/752b68e1-0ff7-429a-b1b4-bcbf4cd8dbd2-21"
-mskClusterName = f'{project}-{env}-{app}-mskCluster'
-mskCustomerPwdParamStoreValue = "1wB9OvtfxX4v6SSkfMqN646d2j20DbCK"
-crossAccountAz1 = "us-east-1b"
-crossAccountAz2 = "us-east-1c"
+mskClusterArn = "arn:aws:kafka:us-east-1:546268160168:cluster/awsblog-dev-app-mskCluster/86863a17-2a7f-47b1-ba61-4a65e85d1435-21"   #ARN of the MSK cluster
+mskClusterName = f'{project}-{env}-{app}-mskCluster'                    #Name of the MSK cluster
+mskCustomerPwdParamStoreValue = "fukZcMA9uAUpfEmi7vW6e7Px7i2DsC3h"      #Password stored in AWS Parameter Store for MSK customer
+crossAccountAz1 = "us-east-1c"                                          #Availability Zone 1 for cross-account deployment
+crossAccountAz2 = "us-east-1d"                                          #Availability Zone 2 for cross-account deployment

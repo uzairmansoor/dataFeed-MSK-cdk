@@ -4,18 +4,9 @@ from aws_cdk import (
     CfnOutput,
     aws_ec2 as ec2,
     aws_iam as iam,
-    aws_s3 as s3,
     aws_iam as iam,
     aws_msk as msk,
-    aws_ssm as ssm,
-    custom_resources as cr,
-    aws_secretsmanager as secretsmanager,
-    aws_opensearchservice as opensearch,
-    aws_kms as kms,
-    aws_logs as logs,
     Tags as tags,
-    aws_opensearchservice as opensearch,
-    aws_kinesisanalytics_flink_alpha as flink,
     Aws as AWS
 )
 from . import parameters
@@ -25,13 +16,6 @@ class dataFeedMskCrossAccount(Stack):
 
     def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
-
-        #############       VPC Configurations      #############
-
-        # availability_zones = {
-        #     'us-east-1a': 'use1-az4',  # Cross account AZ for use1-az4
-        #     'us-east-1b': 'use1-az6'   # Cross account AZ for use1-az6
-        # }
 
         availabilityZonesList = [parameters.crossAccountAz1, parameters.crossAccountAz2]
         vpc = ec2.Vpc (self, "vpc",
@@ -45,14 +29,12 @@ class dataFeedMskCrossAccount(Stack):
                 {
                     "name": f"{parameters.project}-{parameters.env}-{parameters.app}-publicSubnet1",
                     "subnetType": ec2.SubnetType.PUBLIC,
-                    "cidrMask": parameters.cidrMaskForSubnets,
-                    # "availability_zone": availability_zones['us-east-1a']
+                    "cidrMask": parameters.cidrMaskForSubnets
                 },
                 {
                     "name": f"{parameters.project}-{parameters.env}-{parameters.app}-privateSubnet1",
                     "subnetType": ec2.SubnetType.PRIVATE_WITH_EGRESS,
-                    "cidrMask": parameters.cidrMaskForSubnets,
-                    # "availability_zone": availability_zones['us-east-1b']
+                    "cidrMask": parameters.cidrMaskForSubnets
                 }
             ]
         )
