@@ -180,11 +180,7 @@ class dataFeedMsk(Stack):
         openSearchSecrets = secretsmanager.Secret(self, "openSearchSecrets",
             description = "Secrets for OpenSearch",
             secret_name = f"{parameters.project}-{parameters.env}-{parameters.app}-openSearchSecrets",
-            generate_secret_string = secretsmanager.SecretStringGenerator(
-                generate_string_key = "password",
-                secret_string_template = '{"username": "%s"}' % parameters.openSearchMasterUsername,
-                exclude_punctuation = True
-            ),
+            generate_secret_string = secretsmanager.SecretStringGenerator(),
             encryption_key = customerManagedKey
         )
         tags.of(openSearchSecrets).add("name", f"{parameters.project}-{parameters.env}-{parameters.app}-openSearchSecrets")
@@ -641,7 +637,8 @@ class dataFeedMsk(Stack):
             f"sasl.mechanism=SCRAM-SHA-512",
             f"ssl.truststore.location=/home/ec2-user/tmp/kafka.client.truststore.jks",
             "EOF",
-            f"echo 'export AZ_IDS=$(aws ec2 describe-subnets --filters \"Name=vpc-id,Values={vpc.vpc_id}\" --region {AWS.REGION} | jq -r \'.Subnets[].AvailabilityZoneId\' | sort -u | tr \"\\n\" \",\")' >> ~/.bashrc",
+            f"echo 'export AZ_IDS=$(aws ec2 describe-subnets --filters \"Name=vpc-id,Values={vpc.vpc_id}\" --region {AWS.REGION} | jq -r \'.Subnets[].AvailabilityZoneId\' | tr \"\\n\" \",\")' >> ~/.bashrc",
+            f"export AZ_IDS=$(aws ec2 describe-subnets --filters 'Name=vpc-id,Values={vpc.vpc_id}' --region {AWS.REGION} | jq -r '.Subnets[].AvailabilityZoneId' | tr '\n' ',')",
             f'aws ssm put-parameter --name {getAzIdsParamStore.parameter_name} --value "$AZ_IDS" --type "{getAzIdsParamStore.parameter_type}" --overwrite --region {AWS.REGION}',
             f"/kafka_2.13-3.5.1/bin/kafka-acls.sh --authorizer-properties zookeeper.connect=$ZOOKEEPER_CONNECTION --add --allow-principal User:{parameters.mskClientUsername} --operation Read --topic '*'",
             f"/kafka_2.13-3.5.1/bin/kafka-acls.sh --authorizer-properties zookeeper.connect=$ZOOKEEPER_CONNECTION --add --allow-principal User:{parameters.mskClientUsername} --operation Write --topic '*'",
@@ -673,7 +670,7 @@ class dataFeedMsk(Stack):
             "echo 'export KAFKA_SASL_MECHANISM=SCRAM-SHA-512' >> ~/.bashrc",
             f"echo 'export KAFKA_SASL_USERNAME={parameters.mskClientUsername}' >> ~/.bashrc",
             f"echo 'export KAFKA_SASL_PASSWORD={mskClientPwdParamStoreValue}' >> ~/.bashrc",
-            # "python3 ec2-script-live.py TSLA GOOGL"
+            # "python3 ec2-script-historic-para.py"
         )
 
 #############       OpenSearch Configurations      #############
