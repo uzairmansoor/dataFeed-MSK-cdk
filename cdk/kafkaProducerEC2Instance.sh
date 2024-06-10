@@ -17,6 +17,8 @@ EOF
 echo 'export KAFKA_OPTS=-Djava.security.auth.login.config=/home/ec2-user/users_jaas.conf' >> ~/.bashrc
 echo 'export BOOTSTRAP_SERVERS=$(aws kafka get-bootstrap-brokers --cluster-arn ${mskCluster.attr_arn} --region ${AWS.REGION} | jq -r \'.BootstrapBrokerStringSaslScram\')' >> ~/.bashrc
 echo 'export ZOOKEEPER_CONNECTION=$(aws kafka describe-cluster --cluster-arn ${mskCluster.attr_arn} --region ${AWS.REGION} | jq -r \'.ClusterInfo.ZookeeperConnectString\')' >> ~/.bashrc
+sleep 5
+source ~/.bashrc
 aws ssm put-parameter --name ${mskClusterBrokerUrlParamStore.parameter_name} --value "$BOOTSTRAP_SERVERS" --type "${mskClusterBrokerUrlParamStore.parameter_type}" --overwrite --region ${AWS.REGION}
 mkdir tmp
 cp /usr/lib/jvm/java-11-amazon-corretto.x86_64/lib/security/cacerts /home/ec2-user/tmp/kafka.client.truststore.jks
@@ -25,8 +27,10 @@ security.protocol=SASL_SSL
 sasl.mechanism=SCRAM-SHA-512
 ssl.truststore.location=/home/ec2-user/tmp/kafka.client.truststore.jks
 EOF
-echo 'export AZ_IDS=$(aws ec2 describe-subnets --filters "Name=vpc-id,Values=${vpc.vpc_id}" --region ${AWS.REGION} | jq -r \'.Subnets[].AvailabilityZoneId\' | tr "\n" ",")' >> ~/.bashrc
+echo 'export AZ_IDS=$(aws ec2 describe-subnets --filters "Name=vpc-id,Values=${vpc.vpc_id}" --region ${AWS.REGION} | jq -r \'.Subnets[].AvailabilityZoneId\' | sort -u | tr "\n" ",")' >> ~/.bashrc
 export AZ_IDS=$(aws ec2 describe-subnets --filters 'Name=vpc-id,Values=${vpc.vpc_id}' --region ${AWS.REGION} | jq -r '.Subnets[].AvailabilityZoneId' | tr '\n' ',')
+sleep 5
+source ~/.bashrc
 aws ssm put-parameter --name ${getAzIdsParamStore.parameter_name} --value "$AZ_IDS" --type "${getAzIdsParamStore.parameter_type}" --overwrite --region ${AWS.REGION}
 /kafka_2.13-3.5.1/bin/kafka-acls.sh --authorizer-properties zookeeper.connect=$ZOOKEEPER_CONNECTION --add --allow-principal User:${parameters.mskProducerUsername} --operation Read --topic '*'
 /kafka_2.13-3.5.1/bin/kafka-acls.sh --authorizer-properties zookeeper.connect=$ZOOKEEPER_CONNECTION --add --allow-principal User:${parameters.mskProducerUsername} --operation Write --topic '*'

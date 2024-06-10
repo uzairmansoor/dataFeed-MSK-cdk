@@ -15,8 +15,11 @@ from aws_cdk import (
     Tags as tags,
     aws_opensearchservice as opensearch,
     aws_kinesisanalyticsv2 as kinesisanalyticsv2,
+    aws_s3_deployment as s3deployment,
     Aws as AWS
 )
+import os
+from pathlib import Path
 from . import parameters
 
 class dataFeedMsk(Stack):
@@ -588,95 +591,111 @@ class dataFeedMsk(Stack):
         )
 
 #############       MSK Producer and Producer EC2 Instance Configurations      #############
+        # s3_artifacts_path = os.path.abspath("../s3Artifacts/")
+        # deployment = s3deployment.BucketDeployment(self, "deployWebsite",
+        #     sources=[s3deployment.Source.asset(s3_artifacts_path)],
+        #     destination_bucket=s3.Bucket.from_bucket_name(self, "uploadS3Artifacts", parameters.s3BucketName),
+        # )
+        
+        # user_data = ec2.UserData.for_linux()
+        # user_data.add_s3_download_command(
+        #     bucket=s3.Bucket.from_bucket_name(self, "s3BucketArtifacts", parameters.s3BucketName),
+        #     bucket_key="kafkaProducerEC2Instance.sh"
+        #     # local_file="/home/ec2-user/kafkaProducerEC2Instance.sh"
+        # )
+        # user_data.add_commands(
+        #     "chmod +x /home/ec2-user/kafkaProducerEC2Instance.sh",
+        #     "/home/ec2-user/kafkaProducerEC2Instance.sh"
+        # )
 
-        kafkaProducerEc2BlockDevices = ec2.BlockDevice(device_name="/dev/xvda", volume=ec2.BlockDeviceVolume.ebs(10))
-        kafkaProducerEC2Instance = ec2.Instance(self, "kafkaProducerEC2Instance",
-            instance_name = f"{parameters.project}-{parameters.env}-{parameters.app}-kafkaProducerEC2Instance",
-            vpc = vpc,
-            instance_type = ec2.InstanceType.of(ec2.InstanceClass(parameters.ec2InstanceClass), ec2.InstanceSize(parameters.ec2InstanceSize)),
-            machine_image = ec2.AmazonLinuxImage(generation=ec2.AmazonLinuxGeneration.AMAZON_LINUX_2), #ec2.MachineImage().lookup(name = parameters.ec2AmiName),
-            availability_zone = vpc.availability_zones[1],
-            block_devices = [kafkaProducerEc2BlockDevices],
-            vpc_subnets = ec2.SubnetSelection(subnet_type=ec2.SubnetType.PUBLIC),
-            key_pair = keyPair,
-            security_group = sgEc2MskCluster,
-            user_data = ec2.UserData.for_linux(),
-            # user_data = ec2.UserData.add_s3_download_command(
-            #     bucket = bucket.bucket_name,
-            #     bucket_key = "kafkaProducerEC2Instance.sh"
-            # ),
-            role = ec2MskClusterRole
-        )
-        tags.of(kafkaProducerEC2Instance).add("name", f"{parameters.project}-{parameters.env}-{parameters.app}-kafkaProducerEC2Instance")
-        tags.of(kafkaProducerEC2Instance).add("project", parameters.project)
-        tags.of(kafkaProducerEC2Instance).add("env", parameters.env)
-        tags.of(kafkaProducerEC2Instance).add("app", parameters.app)
+        # kafkaProducerEc2BlockDevices = ec2.BlockDevice(device_name="/dev/xvda", volume=ec2.BlockDeviceVolume.ebs(10))
+        # kafkaProducerEC2Instance = ec2.Instance(self, "kafkaProducerEC2Instance",
+        #     instance_name = f"{parameters.project}-{parameters.env}-{parameters.app}-kafkaProducerEC2Instance",
+        #     vpc = vpc,
+        #     instance_type = ec2.InstanceType.of(ec2.InstanceClass(parameters.ec2InstanceClass), ec2.InstanceSize(parameters.ec2InstanceSize)),
+        #     machine_image = ec2.AmazonLinuxImage(generation=ec2.AmazonLinuxGeneration.AMAZON_LINUX_2), #ec2.MachineImage().lookup(name = parameters.ec2AmiName),
+        #     availability_zone = vpc.availability_zones[1],
+        #     block_devices = [kafkaProducerEc2BlockDevices],
+        #     vpc_subnets = ec2.SubnetSelection(subnet_type=ec2.SubnetType.PUBLIC),
+        #     key_pair = keyPair,
+        #     security_group = sgEc2MskCluster,
+        #     user_data = user_data,
+        #     # user_data = ec2.UserData.add_s3_download_command(
+        #     #     bucket = bucket.bucket_name,
+        #     #     bucket_key = "kafkaProducerEC2Instance.sh"
+        #     # ),
+        #     role = ec2MskClusterRole
+        # )
+        # tags.of(kafkaProducerEC2Instance).add("name", f"{parameters.project}-{parameters.env}-{parameters.app}-kafkaProducerEC2Instance")
+        # tags.of(kafkaProducerEC2Instance).add("project", parameters.project)
+        # tags.of(kafkaProducerEC2Instance).add("env", parameters.env)
+        # tags.of(kafkaProducerEC2Instance).add("app", parameters.app)
 
-        kafkaProducerEC2Instance.user_data.add_commands(
-            "sudo su",
-            "sudo yum update -y",
-            "sudo yum -y install java-11",
-            "sudo yum install jq -y",
-            "wget https://archive.apache.org/dist/kafka/3.5.1/kafka_2.13-3.5.1.tgz",
-            "tar -xzf kafka_2.13-3.5.1.tgz",
-            "cd kafka_2.13-3.5.1/libs",
-            "wget https://github.com/aws/aws-msk-iam-auth/releases/download/v1.1.1/aws-msk-iam-auth-1.1.1-all.jar",
-            "cd /home/ec2-user",
-            "cat <<EOF > /home/ec2-user/users_jaas.conf",
-            "KafkaClient {",
-            f"    org.apache.kafka.common.security.scram.ScramLoginModule required",
-            f'    username="{parameters.mskProducerUsername}"',
-            f'    password="{mskProducerPwdParamStoreValue}";',
-            "};",
-            "EOF",
-            f"echo 'export KAFKA_OPTS=-Djava.security.auth.login.config=/home/ec2-user/users_jaas.conf'  >> ~/.bashrc",
-            f"echo 'export BOOTSTRAP_SERVERS=$(aws kafka get-bootstrap-brokers --cluster-arn {mskCluster.attr_arn} --region {AWS.REGION} | jq -r \'.BootstrapBrokerStringSaslScram\')' >> ~/.bashrc",
-            f"echo 'export ZOOKEEPER_CONNECTION=$(aws kafka describe-cluster --cluster-arn {mskCluster.attr_arn} --region {AWS.REGION} | jq -r \'.ClusterInfo.ZookeeperConnectString\')' >> ~/.bashrc",
-            "sleep 5",
-            "source ~/.bashrc",
-            f'aws ssm put-parameter --name {mskClusterBrokerUrlParamStore.parameter_name} --value "$BOOTSTRAP_SERVERS" --type "{mskClusterBrokerUrlParamStore.parameter_type}" --overwrite --region {AWS.REGION}',
-            "mkdir tmp",
-            "cp /usr/lib/jvm/java-11-amazon-corretto.x86_64/lib/security/cacerts /home/ec2-user/tmp/kafka.client.truststore.jks",
-            "cat <<EOF > /home/ec2-user/client_sasl.properties",
-            f"security.protocol=SASL_SSL",
-            f"sasl.mechanism=SCRAM-SHA-512",
-            f"ssl.truststore.location=/home/ec2-user/tmp/kafka.client.truststore.jks",
-            "EOF",
-            f"echo 'export AZ_IDS=$(aws ec2 describe-subnets --filters \"Name=vpc-id,Values={vpc.vpc_id}\" --region {AWS.REGION} | jq -r \'.Subnets[].AvailabilityZoneId\' | sort -u | tr \"\\n\" \",\")' >> ~/.bashrc",
-            f"export AZ_IDS=$(aws ec2 describe-subnets --filters 'Name=vpc-id,Values={vpc.vpc_id}' --region {AWS.REGION} | jq -r '.Subnets[].AvailabilityZoneId' | tr '\n' ',')",
-            "sleep 5",
-            "source ~/.bashrc",
-            f'aws ssm put-parameter --name {getAzIdsParamStore.parameter_name} --value "$AZ_IDS" --type "{getAzIdsParamStore.parameter_type}" --overwrite --region {AWS.REGION}',
-            f"/kafka_2.13-3.5.1/bin/kafka-acls.sh --authorizer-properties zookeeper.connect=$ZOOKEEPER_CONNECTION --add --allow-principal User:{parameters.mskProducerUsername} --operation Read --topic '*'",
-            f"/kafka_2.13-3.5.1/bin/kafka-acls.sh --authorizer-properties zookeeper.connect=$ZOOKEEPER_CONNECTION --add --allow-principal User:{parameters.mskProducerUsername} --operation Write --topic '*'",
-            f"/kafka_2.13-3.5.1/bin/kafka-acls.sh --authorizer-properties zookeeper.connect=$ZOOKEEPER_CONNECTION --add --allow-principal User:{parameters.mskProducerUsername} --operation Read --group '*'",
-            f'/kafka_2.13-3.5.1/bin/kafka-topics.sh --bootstrap-server $BOOTSTRAP_SERVERS --command-config /home/ec2-user/client_sasl.properties --create --topic {parameters.mskTopicName1} --replication-factor 2',
-            f'/kafka_2.13-3.5.1/bin/kafka-topics.sh --bootstrap-server $BOOTSTRAP_SERVERS --command-config /home/ec2-user/client_sasl.properties --create --topic {parameters.mskTopicName2} --replication-factor 2',
-            f'/kafka_2.13-3.5.1/bin/kafka-topics.sh --bootstrap-server $BOOTSTRAP_SERVERS --command-config /home/ec2-user/client_sasl.properties --create --topic {parameters.mskTopicName3} --replication-factor 2',
-            f'/kafka_2.13-3.5.1/bin/kafka-topics.sh --bootstrap-server $BOOTSTRAP_SERVERS --command-config /home/ec2-user/client_sasl.properties --create --topic {parameters.mskTopicName4} --replication-factor 2',
-            f'/kafka_2.13-3.5.1/bin/kafka-topics.sh --bootstrap-server $BOOTSTRAP_SERVERS --list --command-config ./client_sasl.properties',
-            f"/kafka_2.13-3.5.1/bin/kafka-acls.sh --authorizer-properties zookeeper.connect=$ZOOKEEPER_CONNECTION --add --allow-principal User:{parameters.mskConsumerUsername} --operation Read --topic={parameters.mskTopicName3}",
-            f"/kafka_2.13-3.5.1/bin/kafka-acls.sh --authorizer-properties zookeeper.connect=$ZOOKEEPER_CONNECTION --add --allow-principal User:{parameters.mskConsumerUsername} --operation Read --topic={parameters.mskTopicName4}",
-            f"/kafka_2.13-3.5.1/bin/kafka-acls.sh --authorizer-properties zookeeper.connect=$ZOOKEEPER_CONNECTION --add --allow-principal User:{parameters.mskConsumerUsername} --operation Read --group '*'",  
-            "cd /home/ec2-user",
-            "sudo yum update -y",
-            "sudo yum install python3 -y",
-            "sudo yum install python3-pip -y",
-            "sudo mkdir environment",
-            "cd environment",
-            "sudo yum install python3 virtualenv -y",
-            "sudo pip3 install virtualenv",
-            "sudo python3 -m virtualenv alpaca-script",
-            "source alpaca-script/bin/activate",
-            f"pip install -r <(aws s3 cp s3://{bucket.bucket_name}/python-scripts/requirement.txt -)",
-            f"aws s3 cp s3://{bucket.bucket_name}/python-scripts/ec2-script-live.py .",
-            "echo 'export API_KEY=PKECLY5H0GVN02PAODUC' >> ~/.bashrc",
-            "echo 'export SECRET_KEY=AFHK20nUtVfmiTfuMTUV51OJe4YaQybUSbAs7o02' >> ~/.bashrc",
-            "echo 'export KAFKA_SASL_MECHANISM=SCRAM-SHA-512' >> ~/.bashrc",
-            f"echo 'export KAFKA_SASL_USERNAME={parameters.mskProducerUsername}' >> ~/.bashrc",
-            f"echo 'export KAFKA_SASL_PASSWORD={mskProducerPwdParamStoreValue}' >> ~/.bashrc",
-                # "python3 ec2-script-historic-para.py"
-        )
+        # kafkaProducerEC2Instance.user_data.add_commands(
+        #     "sudo su",
+        #     "sudo yum update -y",
+        #     "sudo yum -y install java-11",
+        #     "sudo yum install jq -y",
+        #     "wget https://archive.apache.org/dist/kafka/3.5.1/kafka_2.13-3.5.1.tgz",
+        #     "tar -xzf kafka_2.13-3.5.1.tgz",
+        #     "cd kafka_2.13-3.5.1/libs",
+        #     "wget https://github.com/aws/aws-msk-iam-auth/releases/download/v1.1.1/aws-msk-iam-auth-1.1.1-all.jar",
+        #     "cd /home/ec2-user",
+        #     "cat <<EOF > /home/ec2-user/users_jaas.conf",
+        #     "KafkaClient {",
+        #     f"    org.apache.kafka.common.security.scram.ScramLoginModule required",
+        #     f'    username="{parameters.mskProducerUsername}"',
+        #     f'    password="{mskProducerPwdParamStoreValue}";',
+        #     "};",
+        #     "EOF",
+        #     f"echo 'export KAFKA_OPTS=-Djava.security.auth.login.config=/home/ec2-user/users_jaas.conf'  >> ~/.bashrc",
+        #     f"echo 'export BOOTSTRAP_SERVERS=$(aws kafka get-bootstrap-brokers --cluster-arn {mskCluster.attr_arn} --region {AWS.REGION} | jq -r \'.BootstrapBrokerStringSaslScram\')' >> ~/.bashrc",
+        #     f"echo 'export ZOOKEEPER_CONNECTION=$(aws kafka describe-cluster --cluster-arn {mskCluster.attr_arn} --region {AWS.REGION} | jq -r \'.ClusterInfo.ZookeeperConnectString\')' >> ~/.bashrc",
+        #     "sleep 5",
+        #     "source ~/.bashrc",
+        #     f'aws ssm put-parameter --name {mskClusterBrokerUrlParamStore.parameter_name} --value "$BOOTSTRAP_SERVERS" --type "{mskClusterBrokerUrlParamStore.parameter_type}" --overwrite --region {AWS.REGION}',
+        #     "mkdir tmp",
+        #     "cp /usr/lib/jvm/java-11-amazon-corretto.x86_64/lib/security/cacerts /home/ec2-user/tmp/kafka.client.truststore.jks",
+        #     "cat <<EOF > /home/ec2-user/client_sasl.properties",
+        #     f"security.protocol=SASL_SSL",
+        #     f"sasl.mechanism=SCRAM-SHA-512",
+        #     f"ssl.truststore.location=/home/ec2-user/tmp/kafka.client.truststore.jks",
+        #     "EOF",
+        #     f"echo 'export AZ_IDS=$(aws ec2 describe-subnets --filters \"Name=vpc-id,Values={vpc.vpc_id}\" --region {AWS.REGION} | jq -r \'.Subnets[].AvailabilityZoneId\' | sort -u | tr \"\\n\" \",\")' >> ~/.bashrc",
+        #     f"export AZ_IDS=$(aws ec2 describe-subnets --filters 'Name=vpc-id,Values={vpc.vpc_id}' --region {AWS.REGION} | jq -r '.Subnets[].AvailabilityZoneId' | tr '\n' ',')",
+        #     "sleep 5",
+        #     "source ~/.bashrc",
+        #     f'aws ssm put-parameter --name {getAzIdsParamStore.parameter_name} --value "$AZ_IDS" --type "{getAzIdsParamStore.parameter_type}" --overwrite --region {AWS.REGION}',
+        #     f"/kafka_2.13-3.5.1/bin/kafka-acls.sh --authorizer-properties zookeeper.connect=$ZOOKEEPER_CONNECTION --add --allow-principal User:{parameters.mskProducerUsername} --operation Read --topic '*'",
+        #     f"/kafka_2.13-3.5.1/bin/kafka-acls.sh --authorizer-properties zookeeper.connect=$ZOOKEEPER_CONNECTION --add --allow-principal User:{parameters.mskProducerUsername} --operation Write --topic '*'",
+        #     f"/kafka_2.13-3.5.1/bin/kafka-acls.sh --authorizer-properties zookeeper.connect=$ZOOKEEPER_CONNECTION --add --allow-principal User:{parameters.mskProducerUsername} --operation Read --group '*'",
+        #     f'/kafka_2.13-3.5.1/bin/kafka-topics.sh --bootstrap-server $BOOTSTRAP_SERVERS --command-config /home/ec2-user/client_sasl.properties --create --topic {parameters.mskTopicName1} --replication-factor 2',
+        #     f'/kafka_2.13-3.5.1/bin/kafka-topics.sh --bootstrap-server $BOOTSTRAP_SERVERS --command-config /home/ec2-user/client_sasl.properties --create --topic {parameters.mskTopicName2} --replication-factor 2',
+        #     f'/kafka_2.13-3.5.1/bin/kafka-topics.sh --bootstrap-server $BOOTSTRAP_SERVERS --command-config /home/ec2-user/client_sasl.properties --create --topic {parameters.mskTopicName3} --replication-factor 2',
+        #     f'/kafka_2.13-3.5.1/bin/kafka-topics.sh --bootstrap-server $BOOTSTRAP_SERVERS --command-config /home/ec2-user/client_sasl.properties --create --topic {parameters.mskTopicName4} --replication-factor 2',
+        #     f'/kafka_2.13-3.5.1/bin/kafka-topics.sh --bootstrap-server $BOOTSTRAP_SERVERS --list --command-config ./client_sasl.properties',
+        #     f"/kafka_2.13-3.5.1/bin/kafka-acls.sh --authorizer-properties zookeeper.connect=$ZOOKEEPER_CONNECTION --add --allow-principal User:{parameters.mskConsumerUsername} --operation Read --topic={parameters.mskTopicName3}",
+        #     f"/kafka_2.13-3.5.1/bin/kafka-acls.sh --authorizer-properties zookeeper.connect=$ZOOKEEPER_CONNECTION --add --allow-principal User:{parameters.mskConsumerUsername} --operation Read --topic={parameters.mskTopicName4}",
+        #     f"/kafka_2.13-3.5.1/bin/kafka-acls.sh --authorizer-properties zookeeper.connect=$ZOOKEEPER_CONNECTION --add --allow-principal User:{parameters.mskConsumerUsername} --operation Read --group '*'",  
+        #     "cd /home/ec2-user",
+        #     "sudo yum update -y",
+        #     "sudo yum install python3 -y",
+        #     "sudo yum install python3-pip -y",
+        #     "sudo mkdir environment",
+        #     "cd environment",
+        #     "sudo yum install python3 virtualenv -y",
+        #     "sudo pip3 install virtualenv",
+        #     "sudo python3 -m virtualenv alpaca-script",
+        #     "source alpaca-script/bin/activate",
+        #     f"pip install -r <(aws s3 cp s3://{bucket.bucket_name}/python-scripts/requirement.txt -)",
+        #     f"aws s3 cp s3://{bucket.bucket_name}/python-scripts/ec2-script-live.py .",
+        #     "echo 'export API_KEY=PKECLY5H0GVN02PAODUC' >> ~/.bashrc",
+        #     "echo 'export SECRET_KEY=AFHK20nUtVfmiTfuMTUV51OJe4YaQybUSbAs7o02' >> ~/.bashrc",
+        #     "echo 'export KAFKA_SASL_MECHANISM=SCRAM-SHA-512' >> ~/.bashrc",
+        #     f"echo 'export KAFKA_SASL_USERNAME={parameters.mskProducerUsername}' >> ~/.bashrc",
+        #     f"echo 'export KAFKA_SASL_PASSWORD={mskProducerPwdParamStoreValue}' >> ~/.bashrc",
+        #         # "python3 ec2-script-historic-para.py"
+        # )
 
 #############       OpenSearch Configurations      #############
 
@@ -712,7 +731,7 @@ class dataFeedMsk(Stack):
             ),
             removal_policy = RemovalPolicy.DESTROY
         )
-        openSearchDomain.node.add_dependency(kafkaProducerEC2Instance)
+        # openSearchDomain.node.add_dependency(kafkaProducerEC2Instance)
         tags.of(openSearchDomain).add("name", f"{parameters.project}-{parameters.env}-{parameters.app}-openSearchDomain")
         tags.of(openSearchDomain).add("project", parameters.project)
         tags.of(openSearchDomain).add("env", parameters.env)
@@ -781,7 +800,7 @@ class dataFeedMsk(Stack):
         )
         apacheFlinkApp.node.add_dependency(apacheFlinkAppRole)
         apacheFlinkApp.node.add_dependency(sgApacheFlink)
-        apacheFlinkApp.node.add_dependency(kafkaProducerEC2Instance)
+        # apacheFlinkApp.node.add_dependency(kafkaProducerEC2Instance)
         apacheFlinkApp.node.add_dependency(openSearchDomain)
         tags.of(apacheFlinkApp).add("name", f"{parameters.project}-{parameters.env}-{parameters.app}-apacheFlinkApp")
         tags.of(apacheFlinkApp).add("project", parameters.project)
@@ -833,11 +852,11 @@ class dataFeedMsk(Stack):
             description = "ARN of apache flink app role",
             export_name = f"{parameters.project}-{parameters.env}-{parameters.app}-apacheFlinkAppRoleArn"
         )
-        CfnOutput(self, "kafkaProducerEC2InstanceId",
-            value = kafkaProducerEC2Instance.instance_id,
-            description = "Kafka producer EC2 instance Id",
-            export_name = f"{parameters.project}-{parameters.env}-{parameters.app}-kafkaProducerEC2InstanceId"
-        )
+        # CfnOutput(self, "kafkaProducerEC2InstanceId",
+        #     value = kafkaProducerEC2Instance.instance_id,
+        #     description = "Kafka producer EC2 instance Id",
+        #     export_name = f"{parameters.project}-{parameters.env}-{parameters.app}-kafkaProducerEC2InstanceId"
+        # )
         CfnOutput(self, "customerManagedKeyArn",
             value = customerManagedKey.key_arn,
             description = "ARN of customer managed key",
