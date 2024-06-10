@@ -30,8 +30,8 @@ s3BucketName = "awsblog-dev-app-us-east-1-546268160168-1" #"awsblog-dev-app-us-e
 
 ###   Secrets Manager Parameters   ###
 
-mskClientUsername = "netsol"        #Username for MSK Cluster
-mskCustomerUsername = "customer"
+mskProducerUsername = "netsol"        #Username for MSK Cluster
+mskConsumerUsername = "customer"
 
 ###   MSK Kafka Parameters   ###
 
@@ -40,7 +40,7 @@ mskNumberOfBrokerNodes = 2                  #Number of broker nodes of an MSK Cl
 mskClusterInstanceType = "kafka.m5.large"   #Instance type of MSK cluster
 mskClusterVolumeSize = 100                  #Volume Size of MSK Cluster
 mskScramPropertyEnable = True               #Enable SCRAM (SASL/SCRAM) property for MSK Cluster
-mskEncryptionClientBroker = "TLS"           #Encryption protocol used for communication between clients and 
+mskEncryptionProducerBroker = "TLS"           #Encryption protocol used for communication between clients and 
                                             #brokers in MSK Cluster
 mskEncryptionInClusterEnable = True         #Enable Encryption in MSK Cluster
 mskTopicName1 = "googl"                     #Name of the first MSK topic
@@ -79,7 +79,7 @@ openSearchAvailabilityZoneEnable = True             #Enable deployment of OpenSe
 eventTickerIntervalMinutes = "1"                    #Interval in minutes for event ticker
 
 ###   userInput   ###
-enableSaslScramClientAuth = False       #In the first iteration, disable SASL/SCRAM client authentication, and in the second iteration, enable it.
+enableSaslScramProducerAuth = False       #In the first iteration, disable SASL/SCRAM client authentication, and in the second iteration, enable it.
 enableClusterConfig = False             #In the first iteration, disable cluster configuration, and in the second iteration, enable it
 enableClusterPolicy = False             #In the first iteration, disable cluster policy, and in the second iteration, enable it
 
