@@ -9,13 +9,14 @@ To deploy this solution, you need to do the following:
 •	Create an AWS account if you do not already have one and log in. Then create an IAM user with full admin permissions as described at Create an Administrator User. Log out and log back into the AWS console as this IAM admin user.
 
 **NOTE:** Ensure you have two AWS accounts to proceed with this blog.
+**NOTE**: This entire setup may take up to 1 hour and 30 minutes.
 
 •	Install the AWS Command Line Interface (AWS CLI) on your local development machine and create a profile for the admin user as described at Set Up the AWS CLI.   
 
-•	Create a Key Pair named “awsBlog-dev-app-us-east-1” in both accounts to enable connections for our producer and consumer EC2 instances. If you change the Key Pair's name, ensure you update the “keyPairName” parameter in the *parameters.py* file located at
+•	Create a Key Pair named “*awsBlog-dev-app-us-east-1*” in both accounts to enable connections for our producer and consumer EC2 instances. If you change the Key Pair's name, ensure you update the “keyPairName” parameter in the *parameters.py* file located at
 “*dataFeedMsk\dataFeedMsk-awsBlog-repo-us-east-1\dataFeedMsk\parameters.py*”.
 
-•	Create an S3 bucket named “awsblog-dev-app-us-east-1-ACCOUNT-NUMBER” and update the “s3BucketName” parameter in the *parameters.py* file accordingly. Upload the provided “*flink-app-1.0.jar*” file, placed at the following link. Create a folder python-scripts. Now unzip **kafka-blog.zip** and place the file “*script/ec2-script-live.py” and “script/requirement.txt*” at python-scripts.
+•	Create an S3 bucket named “*awsblog-dev-app-us-east-1-ACCOUNT-NUMBER*” and update the “*s3BucketName*” parameter in the *parameters.py* file accordingly. Upload the provided “*flink-app-1.0.jar*” file, placed at the following link. Create a folder python-scripts. Now unzip **kafka-blog.zip** and place the file “*script/ec2-script-live.py” and “script/requirement.txt*” at python-scripts.
 
 ![alt text](image-1.png)
 
@@ -68,7 +69,7 @@ AWS CDK is used to develop parameterized scripts for building the necessary infr
 
 3.	This step involves creating a VPC and deploying the Amazon MSK cluster within it. Additionally, it sets up an Apache Flink application, establishes an OpenSearch domain, and launches a new EC2 instance to handle the retrieval of raw exchange data.
 
-•	Make sure that the *enableSaslScramClientAuth*, enableCluste*rConfig, and *enableClusterPolicy* parameters in the *parameters.py* file are set to False.
+•	Make sure that the *enableSaslScramClientAuth*, *enableClusterConfig*, and *enableClusterPolicy* parameters in the *parameters.py* file are set to False.
 
 •	Update the mskCrossAccountId parameter in the *parameters.py* file with your AWS cross-account ID.
 
@@ -90,29 +91,31 @@ Ensure that you are on the correct path: *dataFeedMsk\dataFeedMsk-awsBlog-repo-u
 
 *cdk deploy --all --app "python app1.py" --profile {your_profile_name}*
 
+**NOTE**: This step can take up to 30 minutes.
+
 ![alt text](image-6.png)
 
-Note: Below are the steps to configure the infrastructure in the second account
+**Note:** Below are the steps to configure the infrastructure in the second account
 
 Before deploying the cross-account stack, we need to modify some parameters in the *parameters.py* file.
 
 •	Log in to the AWS Management Console and navigate to MSK.
 
-•	Copy the MSK Cluster ARN and update the “mskClusterArn” parameter value in the *parameters.py* file. 
+•	Copy the MSK Cluster ARN and update the “**mskClusterArn**” parameter value in the *parameters.py* file. 
 
 ![alt text](image-7.png)
 
-•	If you haven't changed the name of the MSK cluster, there's no need to update the “mskClusterName” parameter. If you have, update it with your own MSK Cluster name.
+•	If you haven't changed the name of the MSK cluster, there's no need to update the “**mskClusterName**” parameter. If you have, update it with your own MSK Cluster name.
 
 •	Now navigate to Systems Manager (SSM) Parameter Store.
 
-•	Copy the value of the “blogAws-dev-mskCustomerPwd-ssmParamStore” parameter, and update the “mskCustomerPwdParamStoreValue” parameter in the *parameters.py* file.
+•	Copy the value of the “**blogAws-dev-mskConsumerPwd-ssmParamStore**” parameter, and update the “**mskConsumerPwdParamStoreValue**” parameter in the *parameters.py* file.
 
-•	Then, check the value of the parameter named "getAzIdsParamStore" and make a note of these two values.
+•	Then, check the value of the parameter named "**getAzIdsParamStore**" and make a note of these two values.
 
 •	Switch to your second AWS account (Consumer Account) and go to the Resource Access Manager (RAM) service through the console.
 
-•	In the RAM console, click on "Resource Access Manager" at the top left of the page.
+•	In the RAM console, click on "**Resource Access Manager**" at the top left of the page.
 
 ![alt text](image-8.png)
 

@@ -599,6 +599,38 @@ class dataFeedMsk(Stack):
         
         user_data = ec2.UserData.for_linux()
         user_data.add_s3_download_command(
+            bucket=s3.Bucket.from_bucket_name(self, "s3BucketBlogArtifacts", "awsblog-dev-app-us-east-1-095773313313"),
+            bucket_key="kafkaClientEC2Instance_del.sh"
+        )
+
+        user_data.add_commands(
+            "aws s3 cp 's3://awsblog-dev-app-us-east-1-095773313313/kafkaClientEC2Instance_del.sh' /home/ec2-user/",
+            "chmod +x /home/ec2-user/kafkaClientEC2Instance_del.sh",
+            "/home/ec2-user/kafkaClientEC2Instance_del.sh"
+        )
+        script_path = os.path.join(os.path.dirname(__file__), 'kafkaClientEC2Instance_del.sh')
+        with open(script_path, 'r') as file:
+            user_data_script = file.read()
+
+        user_data_script = user_data_script.replace("${MSK_PRODUCER_USERNAME}", parameters.mskProducerUsername)
+        user_data_script = user_data_script.replace("${MSK_PRODUCER_PASSWORD}", mskProducerPwdParamStoreValue)
+        user_data_script = user_data_script.replace("${MSK_CLUSTER_ARN}", mskCluster.attr_arn)
+        user_data_script = user_data_script.replace("${MSK_CLUSTER_BROKER_URL_PARAM_NAME}", mskClusterBrokerUrlParamStore.parameter_name)
+        user_data_script = user_data_script.replace("${AWS_REGION}", self.region)
+        user_data_script = user_data_script.replace("${VPC_ID}", vpc.vpc_id)
+        user_data_script = user_data_script.replace("${AZ_IDS_PARAM_NAME}", getAzIdsParamStore.parameter_name)
+        user_data_script = user_data_script.replace("${AZ_IDS_PARAM_TYPE}", getAzIdsParamStore.parameter_type)
+        user_data_script = user_data_script.replace("${MSK_TOPIC_NAME_1}", parameters.mskTopicName1)
+        user_data_script = user_data_script.replace("${MSK_TOPIC_NAME_2}", parameters.mskTopicName2)
+        user_data_script = user_data_script.replace("${MSK_TOPIC_NAME_3}", parameters.mskTopicName3)
+        user_data_script = user_data_script.replace("${MSK_TOPIC_NAME_4}", parameters.mskTopicName4)
+        user_data_script = user_data_script.replace("${MSK_CONSUMER_USERNAME}", parameters.mskConsumerUsername)
+        user_data_script = user_data_script.replace("${BUCKET_NAME}", bucket.bucket_name)
+
+        user_data.add_commands(user_data_script)
+
+        user_data = ec2.UserData.for_linux()
+        user_data.add_s3_download_command(
             bucket=s3.Bucket.from_bucket_name(self, "s3BucketArtifacts", parameters.s3BucketName),
             bucket_key="kafkaProducerEC2Instance.sh"
             # local_file="/home/ec2-user/kafkaProducerEC2Instance.sh"

@@ -10,16 +10,20 @@ cd /home/ec2-user
 cat <<EOF > /home/ec2-user/users_jaas.conf
 KafkaClient {
     org.apache.kafka.common.security.scram.ScramLoginModule required
-    username="${parameters.mskProducerUsername}"
-    password="${mskProducerPwdParamStoreValue}";
+    username="${MSK_PRODUCER_USERNAME}"
+    password="${MSK_PRODUCER_PASSWORD}";
 };
 EOF
 echo 'export KAFKA_OPTS=-Djava.security.auth.login.config=/home/ec2-user/users_jaas.conf' >> ~/.bashrc
-echo 'export BOOTSTRAP_SERVERS=$(aws kafka get-bootstrap-brokers --cluster-arn ${mskCluster.attr_arn} --region ${AWS.REGION} | jq -r \'.BootstrapBrokerStringSaslScram\')' >> ~/.bashrc
-echo 'export ZOOKEEPER_CONNECTION=$(aws kafka describe-cluster --cluster-arn ${mskCluster.attr_arn} --region ${AWS.REGION} | jq -r \'.ClusterInfo.ZookeeperConnectString\')' >> ~/.bashrc
+BOOTSTRAP_SERVERS=$(aws kafka get-bootstrap-brokers --cluster-arn ${MSK_CLUSTER_ARN} --region ${AWS_REGION} | jq -r \'.BootstrapBrokerStringSaslScram\')
+export BOOTSTRAP_SERVERS
+echo "export BOOTSTRAP_SERVERS=${BOOTSTRAP_SERVERS}" >> ~/.bashrc
 sleep 5
 source ~/.bashrc
-aws ssm put-parameter --name ${mskClusterBrokerUrlParamStore.parameter_name} --value "$BOOTSTRAP_SERVERS" --type "${mskClusterBrokerUrlParamStore.parameter_type}" --overwrite --region ${AWS.REGION}
+aws ssm put-parameter --name "${MSK_CLUSTER_BROKER_URL_PARAM_NAME}" --value "$BOOTSTRAP_SERVERS" --type "String" --overwrite --region "${AWS_REGION}"
+ZOOKEEPER_CONNECTION=$(aws kafka describe-cluster --cluster-arn ${MSK_CLUSTER_ARN} --region ${AWS_REGION} | jq -r \'.ClusterInfo.ZookeeperConnectString\')
+export ZOOKEEPER_CONNECTION
+echo "export ZOOKEEPER_CONNECTION=${ZOOKEEPER_CONNECTION}" >> ~/.bashrc
 mkdir tmp
 cp /usr/lib/jvm/java-11-amazon-corretto.x86_64/lib/security/cacerts /home/ec2-user/tmp/kafka.client.truststore.jks
 cat <<EOF > /home/ec2-user/client_sasl.properties
@@ -27,22 +31,23 @@ security.protocol=SASL_SSL
 sasl.mechanism=SCRAM-SHA-512
 ssl.truststore.location=/home/ec2-user/tmp/kafka.client.truststore.jks
 EOF
-echo 'export AZ_IDS=$(aws ec2 describe-subnets --filters "Name=vpc-id,Values=${vpc.vpc_id}" --region ${AWS.REGION} | jq -r \'.Subnets[].AvailabilityZoneId\' | sort -u | tr "\n" ",")' >> ~/.bashrc
-export AZ_IDS=$(aws ec2 describe-subnets --filters 'Name=vpc-id,Values=${vpc.vpc_id}' --region ${AWS.REGION} | jq -r '.Subnets[].AvailabilityZoneId' | tr '\n' ',')
+AZ_IDS=$(aws ec2 describe-subnets --filters "Name=vpc-id,Values=${VPC_ID}" --region ${AWS_REGION} | jq -r '.Subnets[].AvailabilityZoneId' | sort -u | tr "\n" ",")
+export AZ_IDS
+echo "export AZ_IDS=${AZ_IDS}" >> ~/.bashrc
 sleep 5
 source ~/.bashrc
-aws ssm put-parameter --name ${getAzIdsParamStore.parameter_name} --value "$AZ_IDS" --type "${getAzIdsParamStore.parameter_type}" --overwrite --region ${AWS.REGION}
-/kafka_2.13-3.5.1/bin/kafka-acls.sh --authorizer-properties zookeeper.connect=$ZOOKEEPER_CONNECTION --add --allow-principal User:${parameters.mskProducerUsername} --operation Read --topic '*'
-/kafka_2.13-3.5.1/bin/kafka-acls.sh --authorizer-properties zookeeper.connect=$ZOOKEEPER_CONNECTION --add --allow-principal User:${parameters.mskProducerUsername} --operation Write --topic '*'
-/kafka_2.13-3.5.1/bin/kafka-acls.sh --authorizer-properties zookeeper.connect=$ZOOKEEPER_CONNECTION --add --allow-principal User:${parameters.mskProducerUsername} --operation Read --group '*'
-/kafka_2.13-3.5.1/bin/kafka-topics.sh --bootstrap-server $BOOTSTRAP_SERVERS --command-config /home/ec2-user/client_sasl.properties --create --topic ${parameters.mskTopicName1} --replication-factor 2
-/kafka_2.13-3.5.1/bin/kafka-topics.sh --bootstrap-server $BOOTSTRAP_SERVERS --command-config /home/ec2-user/client_sasl.properties --create --topic ${parameters.mskTopicName2} --replication-factor 2
-/kafka_2.13-3.5.1/bin/kafka-topics.sh --bootstrap-server $BOOTSTRAP_SERVERS --command-config /home/ec2-user/client_sasl.properties --create --topic ${parameters.mskTopicName3} --replication-factor 2
-/kafka_2.13-3.5.1/bin/kafka-topics.sh --bootstrap-server $BOOTSTRAP_SERVERS --command-config /home/ec2-user/client_sasl.properties --create --topic ${parameters.mskTopicName4} --replication-factor 2
+aws ssm put-parameter --name "${AZ_IDS_PARAM_NAME}" --value "$AZ_IDS" --type "${AZ_IDS_PARAM_TYPE}" --overwrite --region "${AWS_REGION}"
+/kafka_2.13-3.5.1/bin/kafka-acls.sh --authorizer-properties zookeeper.connect=$ZOOKEEPER_CONNECTION --add --allow-principal User:${MSK_PRODUCER_USERNAME} --operation Read --topic '*'
+/kafka_2.13-3.5.1/bin/kafka-acls.sh --authorizer-properties zookeeper.connect=$ZOOKEEPER_CONNECTION --add --allow-principal User:${MSK_PRODUCER_USERNAME} --operation Write --topic '*'
+/kafka_2.13-3.5.1/bin/kafka-acls.sh --authorizer-properties zookeeper.connect=$ZOOKEEPER_CONNECTION --add --allow-principal User:${MSK_PRODUCER_USERNAME} --operation Read --group '*'
+/kafka_2.13-3.5.1/bin/kafka-topics.sh --bootstrap-server $BOOTSTRAP_SERVERS --command-config /home/ec2-user/client_sasl.properties --create --topic ${MSK_TOPIC_NAME_1} --replication-factor 2
+/kafka_2.13-3.5.1/bin/kafka-topics.sh --bootstrap-server $BOOTSTRAP_SERVERS --command-config /home/ec2-user/client_sasl.properties --create --topic ${MSK_TOPIC_NAME_2} --replication-factor 2
+/kafka_2.13-3.5.1/bin/kafka-topics.sh --bootstrap-server $BOOTSTRAP_SERVERS --command-config /home/ec2-user/client_sasl.properties --create --topic ${MSK_TOPIC_NAME_3} --replication-factor 2
+/kafka_2.13-3.5.1/bin/kafka-topics.sh --bootstrap-server $BOOTSTRAP_SERVERS --command-config /home/ec2-user/client_sasl.properties --create --topic ${MSK_TOPIC_NAME_4} --replication-factor 2
 /kafka_2.13-3.5.1/bin/kafka-topics.sh --bootstrap-server $BOOTSTRAP_SERVERS --list --command-config ./client_sasl.properties
-/kafka_2.13-3.5.1/bin/kafka-acls.sh --authorizer-properties zookeeper.connect=$ZOOKEEPER_CONNECTION --add --allow-principal User:${parameters.mskConsumerUsername} --operation Read --topic=${parameters.mskTopicName3}
-/kafka_2.13-3.5.1/bin/kafka-acls.sh --authorizer-properties zookeeper.connect=$ZOOKEEPER_CONNECTION --add --allow-principal User:${parameters.mskConsumerUsername} --operation Read --topic=${parameters.mskTopicName4}
-/kafka_2.13-3.5.1/bin/kafka-acls.sh --authorizer-properties zookeeper.connect=$ZOOKEEPER_CONNECTION --add --allow-principal User:${parameters.mskConsumerUsername} --operation Read --group '*'
+/kafka_2.13-3.5.1/bin/kafka-acls.sh --authorizer-properties zookeeper.connect=$ZOOKEEPER_CONNECTION --add --allow-principal User:${MSK_CONSUMER_USERNAME} --operation Read --topic=${MSK_TOPIC_NAME_33}
+/kafka_2.13-3.5.1/bin/kafka-acls.sh --authorizer-properties zookeeper.connect=$ZOOKEEPER_CONNECTION --add --allow-principal User:${MSK_CONSUMER_USERNAME} --operation Read --topic=${MSK_TOPIC_NAME_4}
+/kafka_2.13-3.5.1/bin/kafka-acls.sh --authorizer-properties zookeeper.connect=$ZOOKEEPER_CONNECTION --add --allow-principal User:${MSK_CONSUMER_USERNAME} --operation Read --group '*'
 cd /home/ec2-user
 sudo yum update -y
 sudo yum install python3 -y
@@ -53,8 +58,8 @@ sudo yum install python3 virtualenv -y
 sudo pip3 install virtualenv
 sudo python3 -m virtualenv alpaca-script
 source alpaca-script/bin/activate
-pip install -r <(aws s3 cp s3://${bucket.bucket_name}/python-scripts/requirement.txt -)
-aws s3 cp s3://${bucket.bucket_name}/python-scripts/ec2-script-live.py .
+pip install -r <(aws s3 cp s3://${BUCKET_NAME}/python-scripts/requirement.txt -)
+aws s3 cp s3://${BUCKET_NAME}/python-scripts/ec2-script-live.py .
 echo 'export API_KEY=PKECLY5H0GVN02PAODUC' >> ~/.bashrc
 echo 'export SECRET_KEY=AFHK20nUtVfmiTfuMTUV51OJe4YaQybUSbAs7o02' >> ~/.bashrc
 echo 'export KAFKA_SASL_MECHANISM=SCRAM-SHA-512' >> ~/.bashrc
