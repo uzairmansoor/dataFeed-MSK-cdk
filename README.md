@@ -1,4 +1,5 @@
-Prerequisites 
+Prerequisites:
+
 To deploy this solution, you need to do the following: 
  
 •	Create an AWS account if you do not already have one and log in. Then create an IAM user with full admin permissions as described at Create an Administrator User. Log out and log back into the AWS console as this IAM admin user.
