@@ -21,7 +21,8 @@ NOTE: Ensure you have two AWS accounts to proceed with this blog.
 ![alt text](image-2.png)
 
 •	Install the latest version of AWS CDK globally
-npm install -g aws-cdk@latest
+
+*npm install -g aws-cdk@latest*
 
 ## Infrastructure Automation
  
@@ -38,13 +39,18 @@ AWS CDK is used to develop parameterized scripts for building the necessary infr
 9.	OpenSearch Domain
 10.	Apache Flink Application
 
-*Deploying the Infrastructure* 
+## Deploying the Infrastructure 
  
-1.	On your development machine, clone the repo and install the Python packages. 
-git clone {public_repository_url} 
+1.	On your development machine, clone the repo and install the Python packages.
+
+*git clone {public_repository_url}*
+
 2.	Install the necessary libraries
-cd dataFeedMSK\dataFeedMsk-awsBlog-repo-us-east-1
-pip install –r requirements.txt [Run this command in Powershell]
+
+*cd dataFeedMSK\dataFeedMsk-awsBlog-repo-us-east-1*
+
+*pip install –r requirements.txt* [Run this command in Powershell]
+
 3.	Set the environment variables
 set CDK_DEFAULT_ACCOUNT={your_aws_account_id}
 set CDK_DEFAULT_REGION=us-east-1
