@@ -1,4 +1,4 @@
-###### Publishing real-time financial data feeds using Amazon Managed Streaming for Kafka
+##### Publishing real-time financial data feeds using Amazon Managed Streaming for Kafka
 
 ![alt text](image-14.png)
 
