@@ -1,4 +1,4 @@
-Prerequisites:
+*Prerequisites*
 
 To deploy this solution, you need to do the following: 
  
@@ -18,11 +18,7 @@ NOTE: Ensure you have two AWS accounts to proceed with this blog.
 •	Install the latest version of AWS CDK globally
 npm install -g aws-cdk@latest
 
-
-
-
-
-Infrastructure Automation  
+*Infrastructure Automation* 
  
 AWS CDK is used to develop parameterized scripts for building the necessary infrastructure. These scripts include various services required for the infrastructure setup.
  
@@ -37,7 +33,7 @@ AWS CDK is used to develop parameterized scripts for building the necessary infr
 9.	OpenSearch Domain
 10.	Apache Flink Application
 
-Deploying the Infrastructure  
+*Deploying the Infrastructure* 
  
 1.	On your development machine, clone the repo and install the Python packages. 
 git clone {public_repository_url} 
