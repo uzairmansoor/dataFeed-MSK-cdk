@@ -1,4 +1,8 @@
-**Prerequisites**
+### Publishing real-time financial data feeds using Amazon Managed Streaming for Kafka
+
+![alt text](image-14.png)
+
+## Prerequisites
 
 To deploy this solution, you need to do the following: 
  
@@ -18,7 +22,7 @@ NOTE: Ensure you have two AWS accounts to proceed with this blog.
 •	Install the latest version of AWS CDK globally
 npm install -g aws-cdk@latest
 
-*Infrastructure Automation* 
+## Infrastructure Automation
  
 AWS CDK is used to develop parameterized scripts for building the necessary infrastructure. These scripts include various services required for the infrastructure setup.
  
