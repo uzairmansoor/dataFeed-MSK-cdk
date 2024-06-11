@@ -597,39 +597,39 @@ class dataFeedMsk(Stack):
         #     destination_bucket=s3.Bucket.from_bucket_name(self, "uploadS3Artifacts", parameters.s3BucketName),
         # )
         
-        # user_data = ec2.UserData.for_linux()
-        # user_data.add_s3_download_command(
-        #     bucket=s3.Bucket.from_bucket_name(self, "s3BucketArtifacts", parameters.s3BucketName),
-        #     bucket_key="kafkaProducerEC2Instance.sh"
-        #     # local_file="/home/ec2-user/kafkaProducerEC2Instance.sh"
-        # )
-        # user_data.add_commands(
-        #     "chmod +x /home/ec2-user/kafkaProducerEC2Instance.sh",
-        #     "/home/ec2-user/kafkaProducerEC2Instance.sh"
-        # )
+        user_data = ec2.UserData.for_linux()
+        user_data.add_s3_download_command(
+            bucket=s3.Bucket.from_bucket_name(self, "s3BucketArtifacts", parameters.s3BucketName),
+            bucket_key="kafkaProducerEC2Instance.sh"
+            # local_file="/home/ec2-user/kafkaProducerEC2Instance.sh"
+        )
+        user_data.add_commands(
+            "chmod +x /home/ec2-user/kafkaProducerEC2Instance.sh",
+            "/home/ec2-user/kafkaProducerEC2Instance.sh"
+        )
 
-        # kafkaProducerEc2BlockDevices = ec2.BlockDevice(device_name="/dev/xvda", volume=ec2.BlockDeviceVolume.ebs(10))
-        # kafkaProducerEC2Instance = ec2.Instance(self, "kafkaProducerEC2Instance",
-        #     instance_name = f"{parameters.project}-{parameters.env}-{parameters.app}-kafkaProducerEC2Instance",
-        #     vpc = vpc,
-        #     instance_type = ec2.InstanceType.of(ec2.InstanceClass(parameters.ec2InstanceClass), ec2.InstanceSize(parameters.ec2InstanceSize)),
-        #     machine_image = ec2.AmazonLinuxImage(generation=ec2.AmazonLinuxGeneration.AMAZON_LINUX_2), #ec2.MachineImage().lookup(name = parameters.ec2AmiName),
-        #     availability_zone = vpc.availability_zones[1],
-        #     block_devices = [kafkaProducerEc2BlockDevices],
-        #     vpc_subnets = ec2.SubnetSelection(subnet_type=ec2.SubnetType.PUBLIC),
-        #     key_pair = keyPair,
-        #     security_group = sgEc2MskCluster,
-        #     user_data = user_data,
-        #     # user_data = ec2.UserData.add_s3_download_command(
-        #     #     bucket = bucket.bucket_name,
-        #     #     bucket_key = "kafkaProducerEC2Instance.sh"
-        #     # ),
-        #     role = ec2MskClusterRole
-        # )
-        # tags.of(kafkaProducerEC2Instance).add("name", f"{parameters.project}-{parameters.env}-{parameters.app}-kafkaProducerEC2Instance")
-        # tags.of(kafkaProducerEC2Instance).add("project", parameters.project)
-        # tags.of(kafkaProducerEC2Instance).add("env", parameters.env)
-        # tags.of(kafkaProducerEC2Instance).add("app", parameters.app)
+        kafkaProducerEc2BlockDevices = ec2.BlockDevice(device_name="/dev/xvda", volume=ec2.BlockDeviceVolume.ebs(10))
+        kafkaProducerEC2Instance = ec2.Instance(self, "kafkaProducerEC2Instance",
+            instance_name = f"{parameters.project}-{parameters.env}-{parameters.app}-kafkaProducerEC2Instance",
+            vpc = vpc,
+            instance_type = ec2.InstanceType.of(ec2.InstanceClass(parameters.ec2InstanceClass), ec2.InstanceSize(parameters.ec2InstanceSize)),
+            machine_image = ec2.AmazonLinuxImage(generation=ec2.AmazonLinuxGeneration.AMAZON_LINUX_2), #ec2.MachineImage().lookup(name = parameters.ec2AmiName),
+            availability_zone = vpc.availability_zones[1],
+            block_devices = [kafkaProducerEc2BlockDevices],
+            vpc_subnets = ec2.SubnetSelection(subnet_type=ec2.SubnetType.PUBLIC),
+            key_pair = keyPair,
+            security_group = sgEc2MskCluster,
+            user_data = user_data,
+            # user_data = ec2.UserData.add_s3_download_command(
+            #     bucket = bucket.bucket_name,
+            #     bucket_key = "kafkaProducerEC2Instance.sh"
+            # ),
+            role = ec2MskClusterRole
+        )
+        tags.of(kafkaProducerEC2Instance).add("name", f"{parameters.project}-{parameters.env}-{parameters.app}-kafkaProducerEC2Instance")
+        tags.of(kafkaProducerEC2Instance).add("project", parameters.project)
+        tags.of(kafkaProducerEC2Instance).add("env", parameters.env)
+        tags.of(kafkaProducerEC2Instance).add("app", parameters.app)
 
         # kafkaProducerEC2Instance.user_data.add_commands(
         #     "sudo su",
