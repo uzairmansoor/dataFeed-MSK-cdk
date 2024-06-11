@@ -14,7 +14,7 @@ NOTE: Ensure you have two AWS accounts to proceed with this blog.
 •	Create a Key Pair named “awsBlog-dev-app-us-east-1” in both accounts to enable connections for our producer and consumer EC2 instances. If you change the Key Pair's name, ensure you update the “keyPairName” parameter in the *parameters.py* file located at
 “*dataFeedMsk\dataFeedMsk-awsBlog-repo-us-east-1\dataFeedMsk\parameters.py*”.
 
-•	Create an S3 bucket named “awsblog-dev-app-us-east-1-ACCOUNT-NUMBER” and update the “s3BucketName” parameter in the *parameters.py* file accordingly. Upload the provided “flink-app-1.0.jar” file, placed at the following link. Create a folder python-scripts. Now unzip kafka-blog.zip and place the file “*script/ec2-script-live.py” and “script/requirement.txt*” at python-scripts.
+•	Create an S3 bucket named “awsblog-dev-app-us-east-1-ACCOUNT-NUMBER” and update the “s3BucketName” parameter in the *parameters.py* file accordingly. Upload the provided “*flink-app-1.0.jar*” file, placed at the following link. Create a folder python-scripts. Now unzip **kafka-blog.zip** and place the file “*script/ec2-script-live.py” and “script/requirement.txt*” at python-scripts.
 
 ![alt text](image-1.png)
 
