@@ -1,4 +1,4 @@
-*Prerequisites*
+**Prerequisites**
 
 To deploy this solution, you need to do the following: 
  
