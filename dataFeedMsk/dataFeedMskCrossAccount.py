@@ -2,20 +2,25 @@ from constructs import Construct
 from aws_cdk import (
     Stack,
     CfnOutput,
+    RemovalPolicy,
     aws_ec2 as ec2,
     aws_iam as iam,
     aws_iam as iam,
     aws_msk as msk,
+    aws_s3 as s3,
     Tags as tags,
+    aws_s3_deployment as s3deployment,
     Aws as AWS
 )
+import os
 from . import parameters
-
 
 class dataFeedMskCrossAccount(Stack):
 
     def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
+
+#############       VPC Configurations      #############
 
         availabilityZonesList = [parameters.crossAccountAz1, parameters.crossAccountAz2]
         vpc = ec2.Vpc (self, "vpc",
@@ -46,6 +51,8 @@ class dataFeedMskCrossAccount(Stack):
 #############       EC2 Key Pair Configurations      #############
 
         keyPair = ec2.KeyPair.from_key_pair_name(self, "ec2KeyPair", parameters.keyPairName)
+
+#############       Security Group Configurations      #############
 
         sgMskCluster = ec2.SecurityGroup(self, "sgMskCluster",
             security_group_name = f"{parameters.project}-{parameters.env}-{parameters.app}-sgMskCluster",
@@ -98,6 +105,28 @@ class dataFeedMskCrossAccount(Stack):
         tags.of(consumerEc2Role).add("project", parameters.project)
         tags.of(consumerEc2Role).add("env", parameters.env)
         tags.of(consumerEc2Role).add("app", parameters.app)
+
+#############       S3 Bucket Configurations      #############
+#############       Deploying Artifacts from source bucket to destination bucket      #############
+
+        # bucket = s3.Bucket.from_bucket_name(self, "s3BucketAwsBlogArtifacts", parameters.s3BucketName)
+
+        s3SourceBucket = s3.Bucket.from_bucket_name(self, "s3SourceBucketArtifacts", parameters.s3BucketName)
+ 
+        s3DestinationBucket = s3.Bucket(self, "s3DestinationBucket",
+            bucket_name=f"{parameters.project}-{parameters.env}-artifacts-{AWS.REGION}-{AWS.ACCOUNT_ID}",
+            block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
+            versioned=True,
+            encryption=s3.BucketEncryption.S3_MANAGED,
+            removal_policy=RemovalPolicy.RETAIN
+        )
+ 
+        s3ArtifactsDeployment = s3deployment.BucketDeployment(self, 's3ArtifactsDeployment',
+            sources=[s3deployment.Source.bucket(s3SourceBucket, 'dataFeedMskArtifacts.zip')],
+            destination_bucket=s3DestinationBucket,
+            destination_key_prefix = ''
+        )
+#############       IAM Roles and Policies Configurations      #############
 
         consumerEc2Role.attach_inline_policy(
             iam.Policy(self, 'ec2MskClusterPolicy',
@@ -152,26 +181,44 @@ class dataFeedMskCrossAccount(Stack):
                             "s3:GetObject",
                             "s3:PutObject"
                         ],
-                        resources = [f"arn:aws:s3:::{parameters.s3BucketName}",
-                                    f"arn:aws:s3:::{parameters.s3BucketName}/*"
+                        resources = [f"arn:aws:s3:::{s3DestinationBucket.bucket_name}",
+                                    f"arn:aws:s3:::{s3DestinationBucket.bucket_name}/*"
                         ]
                     )
                 ]
             )
         )
+
+#############      Consumer EC2 Instance Configurations      #############
         
-        kafkaClientEc2BlockDevices = ec2.BlockDevice(device_name="/dev/xvda", volume=ec2.BlockDeviceVolume.ebs(10))
+        user_data = ec2.UserData.for_linux()
+
+        user_data.add_s3_download_command(
+            bucket=s3.Bucket.from_bucket_name(self, "s3BucketArtifacts", s3DestinationBucket.bucket_name),
+            bucket_key="dataFeedMskArtifacts/kafkaConsumerEC2Instance.sh"
+        )
+
+        script_path = os.path.join(os.path.dirname(__file__), 'kafkaConsumerEC2Instance.sh')
+        with open(script_path, 'r') as file:
+            user_data_script = file.read()
+
+        user_data_script = user_data_script.replace("${MSK_CONSUMER_USERNAME}", parameters.mskConsumerUsername)
+        user_data_script = user_data_script.replace("${MSK_CONSUMER_PASSWORD}", parameters.mskConsumerPwdParamStoreValue)
+
+        user_data.add_commands(user_data_script)
+        
+        kafkaConsumerEc2BlockDevices = ec2.BlockDevice(device_name="/dev/xvda", volume=ec2.BlockDeviceVolume.ebs(10))
         kafkaConsumerEC2Instance = ec2.Instance(self, "kafkaConsumerEC2Instance",
             instance_name = f"{parameters.project}-{parameters.env}-{parameters.app}-kafkaConsumerEC2Instance",
             vpc = vpc,
             instance_type = ec2.InstanceType.of(ec2.InstanceClass(parameters.ec2InstanceClass), ec2.InstanceSize(parameters.ec2InstanceSize)),
-            machine_image = ec2.AmazonLinuxImage(generation=ec2.AmazonLinuxGeneration.AMAZON_LINUX_2), #ec2.MachineImage().lookup(name = parameters.amiName),
+            machine_image = ec2.AmazonLinuxImage(generation=ec2.AmazonLinuxGeneration.AMAZON_LINUX_2),
             availability_zone = vpc.availability_zones[1],
-            block_devices = [kafkaClientEc2BlockDevices],
+            block_devices = [kafkaConsumerEc2BlockDevices],
             vpc_subnets = ec2.SubnetSelection(subnet_type=ec2.SubnetType.PUBLIC),
             key_pair = keyPair,
             security_group = sgConsumerEc2,
-            user_data = ec2.UserData.for_linux(),
+            user_data = user_data,
             role = consumerEc2Role
         )
         tags.of(kafkaConsumerEC2Instance).add("name", f"{parameters.project}-{parameters.env}-{parameters.app}-kafkaConsumerEC2Instance")
@@ -179,33 +226,35 @@ class dataFeedMskCrossAccount(Stack):
         tags.of(kafkaConsumerEC2Instance).add("env", parameters.env)
         tags.of(kafkaConsumerEC2Instance).add("app", parameters.app)
 
-        kafkaConsumerEC2Instance.user_data.add_commands(
-            "sudo su",
-            "sudo yum update -y",
-            "sudo yum -y install java-11",
-            "sudo yum install jq -y",
-            "wget https://archive.apache.org/dist/kafka/3.5.1/kafka_2.13-3.5.1.tgz",
-            "tar -xzf kafka_2.13-3.5.1.tgz",
-            "cd kafka_2.13-3.5.1/libs",
-            "wget https://github.com/aws/aws-msk-iam-auth/releases/download/v1.1.1/aws-msk-iam-auth-1.1.1-all.jar",
-            "cd /home/ec2-user",
-            "cat <<EOF > /home/ec2-user/users_jaas.conf",
-            "KafkaClient {",
-            f"    org.apache.kafka.common.security.scram.ScramLoginModule required",
-            f'    username="{parameters.mskCustomerUsername}"',
-            f'    password="{parameters.mskCustomerPwdParamStoreValue}";',
-            "};",
-            "EOF",
-            "echo 'export KAFKA_OPTS=-Djava.security.auth.login.config=/home/ec2-user/users_jaas.conf' >> ~/.bashrc",
-            "mkdir tmp",
-            "cp /usr/lib/jvm/java-11-amazon-corretto.x86_64/lib/security/cacerts /home/ec2-user/tmp/kafka.client.truststore.jks",
-            "cat <<EOF > /home/ec2-user/customer_sasl.properties",
-            f"security.protocol=SASL_SSL",
-            f"sasl.mechanism=SCRAM-SHA-512",
-            f"ssl.truststore.location=/home/ec2-user/tmp/kafka.client.truststore.jks",
-            "EOF",
-        )
-    
+        # kafkaConsumerEC2Instance.user_data.add_commands(
+        #     "sudo su",
+        #     "sudo yum update -y",
+        #     "sudo yum -y install java-11",
+        #     "sudo yum install jq -y",
+        #     "wget https://archive.apache.org/dist/kafka/3.5.1/kafka_2.13-3.5.1.tgz",
+        #     "tar -xzf kafka_2.13-3.5.1.tgz",
+        #     "cd kafka_2.13-3.5.1/libs",
+        #     "wget https://github.com/aws/aws-msk-iam-auth/releases/download/v1.1.1/aws-msk-iam-auth-1.1.1-all.jar",
+        #     "cd /home/ec2-user",
+        #     "cat <<EOF > /home/ec2-user/users_jaas.conf",
+        #     "KafkaClient {",
+        #     f"    org.apache.kafka.common.security.scram.ScramLoginModule required",
+        #     f'    username="{parameters.mskCustomerUsername}"',
+        #     f'    password="{parameters.mskCustomerPwdParamStoreValue}";',
+        #     "};",
+        #     "EOF",
+        #     "echo 'export KAFKA_OPTS=-Djava.security.auth.login.config=/home/ec2-user/users_jaas.conf' >> ~/.bashrc",
+        #     "mkdir tmp",
+        #     "cp /usr/lib/jvm/java-11-amazon-corretto.x86_64/lib/security/cacerts /home/ec2-user/tmp/kafka.client.truststore.jks",
+        #     "cat <<EOF > /home/ec2-user/customer_sasl.properties",
+        #     f"security.protocol=SASL_SSL",
+        #     f"sasl.mechanism=SCRAM-SHA-512",
+        #     f"ssl.truststore.location=/home/ec2-user/tmp/kafka.client.truststore.jks",
+        #     "EOF",
+        # )
+
+#############       MSK Cluster VPC Connection      #############
+
         mskClusterVpcConnection = msk.CfnVpcConnection(self, "mskClusterVpcConnection",
             authentication="SASL_SCRAM",
             client_subnets=vpc.select_subnets(subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS).subnet_ids[:2],
@@ -244,6 +293,6 @@ class dataFeedMskCrossAccount(Stack):
         )
         CfnOutput(self, "kafkaConsumerEC2InstanceId",
             value = kafkaConsumerEC2Instance.instance_id,
-            description = "Kafka client EC2 instance Id",
+            description = "Kafka consumer EC2 instance Id",
             export_name = f"{parameters.project}-{parameters.env}-{parameters.app}-kafkaConsumerEC2InstanceId"
         )

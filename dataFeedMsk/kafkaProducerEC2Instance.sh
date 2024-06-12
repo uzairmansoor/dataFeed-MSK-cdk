@@ -15,13 +15,13 @@ KafkaClient {
 };
 EOF
 echo 'export KAFKA_OPTS=-Djava.security.auth.login.config=/home/ec2-user/users_jaas.conf' >> ~/.bashrc
-BOOTSTRAP_SERVERS=$(aws kafka get-bootstrap-brokers --cluster-arn ${MSK_CLUSTER_ARN} --region ${AWS_REGION} | jq -r \'.BootstrapBrokerStringSaslScram\')
+BOOTSTRAP_SERVERS=$(aws kafka get-bootstrap-brokers --cluster-arn ${MSK_CLUSTER_ARN} --region ${AWS_REGION} | jq -r '.BootstrapBrokerStringSaslScram')
 export BOOTSTRAP_SERVERS
 echo "export BOOTSTRAP_SERVERS=${BOOTSTRAP_SERVERS}" >> ~/.bashrc
 sleep 5
 source ~/.bashrc
 aws ssm put-parameter --name "${MSK_CLUSTER_BROKER_URL_PARAM_NAME}" --value "$BOOTSTRAP_SERVERS" --type "String" --overwrite --region "${AWS_REGION}"
-ZOOKEEPER_CONNECTION=$(aws kafka describe-cluster --cluster-arn ${MSK_CLUSTER_ARN} --region ${AWS_REGION} | jq -r \'.ClusterInfo.ZookeeperConnectString\')
+ZOOKEEPER_CONNECTION=$(aws kafka describe-cluster --cluster-arn ${MSK_CLUSTER_ARN} --region ${AWS_REGION} | jq -r '.ClusterInfo.ZookeeperConnectString')
 export ZOOKEEPER_CONNECTION
 echo "export ZOOKEEPER_CONNECTION=${ZOOKEEPER_CONNECTION}" >> ~/.bashrc
 mkdir tmp
@@ -45,7 +45,7 @@ aws ssm put-parameter --name "${AZ_IDS_PARAM_NAME}" --value "$AZ_IDS" --type "${
 /kafka_2.13-3.5.1/bin/kafka-topics.sh --bootstrap-server $BOOTSTRAP_SERVERS --command-config /home/ec2-user/client_sasl.properties --create --topic ${MSK_TOPIC_NAME_3} --replication-factor 2
 /kafka_2.13-3.5.1/bin/kafka-topics.sh --bootstrap-server $BOOTSTRAP_SERVERS --command-config /home/ec2-user/client_sasl.properties --create --topic ${MSK_TOPIC_NAME_4} --replication-factor 2
 /kafka_2.13-3.5.1/bin/kafka-topics.sh --bootstrap-server $BOOTSTRAP_SERVERS --list --command-config ./client_sasl.properties
-/kafka_2.13-3.5.1/bin/kafka-acls.sh --authorizer-properties zookeeper.connect=$ZOOKEEPER_CONNECTION --add --allow-principal User:${MSK_CONSUMER_USERNAME} --operation Read --topic=${MSK_TOPIC_NAME_33}
+/kafka_2.13-3.5.1/bin/kafka-acls.sh --authorizer-properties zookeeper.connect=$ZOOKEEPER_CONNECTION --add --allow-principal User:${MSK_CONSUMER_USERNAME} --operation Read --topic=${MSK_TOPIC_NAME_3}
 /kafka_2.13-3.5.1/bin/kafka-acls.sh --authorizer-properties zookeeper.connect=$ZOOKEEPER_CONNECTION --add --allow-principal User:${MSK_CONSUMER_USERNAME} --operation Read --topic=${MSK_TOPIC_NAME_4}
 /kafka_2.13-3.5.1/bin/kafka-acls.sh --authorizer-properties zookeeper.connect=$ZOOKEEPER_CONNECTION --add --allow-principal User:${MSK_CONSUMER_USERNAME} --operation Read --group '*'
 cd /home/ec2-user
@@ -58,10 +58,12 @@ sudo yum install python3 virtualenv -y
 sudo pip3 install virtualenv
 sudo python3 -m virtualenv alpaca-script
 source alpaca-script/bin/activate
-pip install -r <(aws s3 cp s3://${BUCKET_NAME}/python-scripts/requirement.txt -)
-aws s3 cp s3://${BUCKET_NAME}/python-scripts/ec2-script-live.py .
+pip install -r <(aws s3 cp s3://${BUCKET_NAME}/dataFeedMskArtifacts/python-scripts/requirement.txt -)
+aws s3 cp s3://${BUCKET_NAME}/dataFeedMskArtifacts/python-scripts/ec2-script-live.py .
 echo 'export API_KEY=PKECLY5H0GVN02PAODUC' >> ~/.bashrc
 echo 'export SECRET_KEY=AFHK20nUtVfmiTfuMTUV51OJe4YaQybUSbAs7o02' >> ~/.bashrc
 echo 'export KAFKA_SASL_MECHANISM=SCRAM-SHA-512' >> ~/.bashrc
-echo 'export KAFKA_SASL_USERNAME=${parameters.mskProducerUsername}' >> ~/.bashrc
-echo 'export KAFKA_SASL_PASSWORD=${mskProducerPwdParamStoreValue}' >> ~/.bashrc
+export KAFKA_SASL_USERNAME=${MSK_PRODUCER_USERNAME}
+echo "export KAFKA_SASL_USERNAME=${KAFKA_SASL_USERNAME}" >> ~/.bashrc
+export KAFKA_SASL_PASSWORD=${MSK_PRODUCER_PASSWORD}
+echo "export KAFKA_SASL_PASSWORD=${KAFKA_SASL_PASSWORD}" >> ~/.bashrc

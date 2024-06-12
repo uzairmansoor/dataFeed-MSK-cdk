@@ -6,9 +6,9 @@ from aws_cdk import (
     Aws
 )
 
-from cdk.dataFeedMsk import dataFeedMsk
-from cdk import parameters
-from cdk.dataFeedMskCrossAccount import dataFeedMskCrossAccount                                               
+from dataFeedMsk.dataFeedMsk import dataFeedMsk
+from dataFeedMsk import parameters
+from dataFeedMsk.dataFeedMskCrossAccount import dataFeedMskCrossAccount                                               
 
 app = cdk.App()
 
