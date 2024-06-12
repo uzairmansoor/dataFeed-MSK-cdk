@@ -1,6 +1,6 @@
 # Publishing real-time financial data feeds using Amazon Managed Streaming for Kafka
 
-![alt text](image-14.png)
+![image](https://github.com/uzairmansoor/dataFeed-MSK-cdk/assets/82077348/f7f19884-9d49-4f70-8246-8cdb8356380d)
 
 ## Prerequisites
 
@@ -18,9 +18,11 @@ To deploy this solution, you need to do the following:
 
 •	Create an S3 bucket named “*awsblog-dev-app-us-east-1-ACCOUNT-NUMBER*” and update the “*s3BucketName*” parameter in the *parameters.py* file accordingly. Upload the provided “*flink-app-1.0.jar*” file, placed at the following link. Create a folder python-scripts. Now unzip **kafka-blog.zip** and place the file “*script/ec2-script-live.py” and “script/requirement.txt*” at python-scripts.
 
-![alt text](image-1.png)
+![bucket1](https://github.com/uzairmansoor/dataFeed-MSK-cdk/assets/82077348/81459024-5557-4f50-a8e6-8ad0f626715c)
 
-![alt text](image-2.png)
+![bucket2](https://github.com/uzairmansoor/dataFeed-MSK-cdk/assets/82077348/07044922-20a8-42cc-b014-17ab7093cf33)
+
+![bucket3](https://github.com/uzairmansoor/dataFeed-MSK-cdk/assets/82077348/de60279e-b60c-4f0a-9ae3-d4b1e04138ec)
 
 •	Install the latest version of AWS CDK globally
 
@@ -65,7 +67,7 @@ AWS CDK is used to develop parameterized scripts for building the necessary infr
 
 5.	Once bootstrapped, the configuration of the "**CDK Toolkit**" stack will be displayed as follows within the Cloud Formation console.
 
-![alt text](image-3.png)
+![cdk_tool_kit](https://github.com/uzairmansoor/dataFeed-MSK-cdk/assets/82077348/5d6d0b40-7c29-4f0d-8af3-1b9fb896f8f3)
 
 3.	This step involves creating a VPC and deploying the Amazon MSK cluster within it. Additionally, it sets up an Apache Flink application, establishes an OpenSearch domain, and launches a new EC2 instance to handle the retrieval of raw exchange data.
 
@@ -77,9 +79,9 @@ Ensure that you are on the correct path: *dataFeedMsk\dataFeedMsk-awsBlog-repo-u
 
 *cdk deploy --all --app "python app1.py" --profile {your_profile_name}*
 
-![alt text](image-4.png)
+![cfn_resources](https://github.com/uzairmansoor/dataFeed-MSK-cdk/assets/82077348/d4b88398-32ea-4719-87fc-b5299f041642)
 
-![alt text](image-5.png)
+![cfn_resources_1](https://github.com/uzairmansoor/dataFeed-MSK-cdk/assets/82077348/35dfe8ab-e0ba-43f9-92f0-f14030b09b59)
 
 **NOTE**: This step can take up to 45-60 minutes.
 
@@ -93,7 +95,7 @@ Ensure that you are on the correct path: *dataFeedMsk\dataFeedMsk-awsBlog-repo-u
 
 **NOTE**: This step can take up to 30 minutes.
 
-![alt text](image-6.png)
+![msk_cluster](https://github.com/uzairmansoor/dataFeed-MSK-cdk/assets/82077348/d28e34a4-c870-4c0d-bf57-367d0e7581c3)
 
 **Note:** Below are the steps to configure the infrastructure in the second account
 
@@ -103,7 +105,7 @@ Before deploying the cross-account stack, we need to modify some parameters in t
 
 •	Copy the MSK Cluster ARN and update the “**mskClusterArn**” parameter value in the *parameters.py* file. 
 
-![alt text](image-7.png)
+![msk_cluster_2](https://github.com/uzairmansoor/dataFeed-MSK-cdk/assets/82077348/5581dcfe-2039-45ab-9fbf-6b8a2c2317ea)
 
 •	If you haven't changed the name of the MSK cluster, there's no need to update the “**mskClusterName**” parameter. If you have, update it with your own MSK Cluster name.
 
@@ -117,11 +119,11 @@ Before deploying the cross-account stack, we need to modify some parameters in t
 
 •	In the RAM console, click on "**Resource Access Manager**" at the top left of the page.
 
-![alt text](image-8.png)
+![ram](https://github.com/uzairmansoor/dataFeed-MSK-cdk/assets/82077348/f07d4133-62a6-4755-b6a2-69d68cbee827)
 
 •	At the bottom right, you will see a table listing AZ Names and AZ IDs.
 
-![alt text](image-9.png)
+![ram_1](https://github.com/uzairmansoor/dataFeed-MSK-cdk/assets/82077348/16af7e28-6af1-441e-9fbe-43dcc79fbf58)
 
 •	Compare the AZ IDs from the SSM parameter store with the AZ IDs in this table.
 
@@ -129,7 +131,7 @@ Before deploying the cross-account stack, we need to modify some parameters in t
 
 •	Open the *parameters.py* file and insert these AZ Names into the variables “*crossAccountAz1*” and “*crossAccountAz2*”.
 
-![alt text](image-10.png)
+![ram_2](https://github.com/uzairmansoor/dataFeed-MSK-cdk/assets/82077348/1bb3b341-b825-4069-b3f0-3b10047a0eae)
 
 For example, in the SSM Parameter Store, the values are "use1-az4" and "use1-az6". When you switch to the second account's RAM and compare, you find that these values correspond to the AZ names "us-east-1a" and "us-east-1b". You need to update the *parameters.py* file with these AZ names by setting crossAccountAz1 to "us-east-1a" and crossAccountAz2 to "us-east-1b".
 
@@ -147,7 +149,7 @@ Note: Ensure that the Availability Zone IDs for both of your accounts are the sa
 
 Once bootstrapped, the configuration of the "CDK Toolkit" stack will be displayed as follows within the Cloud Formation console.
 
-![alt text](image-11.png)
+![cross_account_cdk](https://github.com/uzairmansoor/dataFeed-MSK-cdk/assets/82077348/092e0c00-a0e3-48ce-bfdc-9b0f1c929798)
 
 3.	In the final iteration, we will deploy the cross-account resources, which include the VPC, Security Groups, IAM Roles, and MSK Cluster VPC Connection.
 
@@ -155,6 +157,6 @@ Ensure that you are on the correct path: *dataFeedMsk\dataFeedMsk-awsBlog-repo-u
 
 *cdk deploy --all --app "python app2.py" --profile {your_profile_name}*
 
-![alt text](image-12.png)
+![cross_account_cfn](https://github.com/uzairmansoor/dataFeed-MSK-cdk/assets/82077348/61297eb5-ae09-4b65-a7cc-3662e27b4933)
 
-![alt text](image-13.png)
+![vpc_connection](https://github.com/uzairmansoor/dataFeed-MSK-cdk/assets/82077348/80d9b43b-0966-4a80-b473-3e280689b609)
