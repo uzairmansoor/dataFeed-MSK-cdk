@@ -78,7 +78,7 @@ Make sure you are in the directory where the app1.py file is located.: *dataFeed
 
 **NOTE**: This step can take up to 45-60 minutes.
 
-4. This deployment creates a s3 bucket with the solution artifacts, these consist of the flink application JAR file, python scripts and, producer and consumer user data. 
+4. This deployment creates an S3 bucket to store the solution artifacts, which include the Flink application JAR file, Python scripts, and user data for both the producer and consumer.
 
 ![bucket1](https://github.com/uzairmansoor/dataFeed-MSK-cdk/assets/82077348/81459024-5557-4f50-a8e6-8ad0f626715c)
 
