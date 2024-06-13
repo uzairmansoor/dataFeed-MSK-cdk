@@ -72,13 +72,13 @@ openSearchDataNodeInstanceType = "t3.small.search"  #Instance type for OpenSearc
 openSearchVolumeSize = 10                           #Volume size for OpenSearch data nodes
 openSearchNodeToNodeEncryption = True               #Select True to enable node-to-node encryption for OpenSearch otherwise False
 openSearchEncryptionAtRest = True                   #Select True to enable encryption at rest for OpenSearch otherwise False
-openSearchMasterUsername = "uzair"                  #Username for accessing OpenSearch
+openSearchMasterUsername = "opensearch"                  #Username for accessing OpenSearch
 openSearchAvailabilityZoneCount = 2                 #Number of AZs for OpenSearch deployment
 openSearchAvailabilityZoneEnable = True             #Select True to enable deployment of OpenSearch across multiple AZs otherwise False                 
 eventTickerIntervalMinutes = "1"                    #Interval in minutes for event ticker
 
 ###   userInput   ###
-enableSaslScramProducerAuth = True     #In the first iteration, disable SASL/SCRAM client authentication, and in the second iteration, enable it.
+enableSaslScramClientAuth = True     #In the first iteration, disable SASL/SCRAM client authentication, and in the second iteration, enable it.
 enableClusterConfig = True             #In the first iteration, disable cluster configuration, and in the second iteration, enable it
 enableClusterPolicy = True             #In the first iteration, disable cluster policy, and in the second iteration, enable it
 

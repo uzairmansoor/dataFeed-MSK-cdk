@@ -378,8 +378,8 @@ class dataFeedMsk(Stack):
         tags.of(getAzIdsParamStore).add("app", parameters.app)
 
 #We are unable to activate the SASL/SCRAM authentication method for producer authentication during the cluster creation process
-        enableSaslScramProducerAuth = parameters.enableSaslScramProducerAuth
-        if enableSaslScramProducerAuth:
+        enableSaslScramClientAuth = parameters.enableSaslScramClientAuth
+        if enableSaslScramClientAuth:
             mskCluster.add_property_override(
                 'BrokerNodeGroupInfo.ConnectivityInfo',
                 {
