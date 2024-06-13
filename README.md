@@ -82,7 +82,7 @@ Make sure you are in the directory where the app1.py file is located.: *dataFeed
 
 ![bucket1](https://github.com/uzairmansoor/dataFeed-MSK-cdk/assets/82077348/81459024-5557-4f50-a8e6-8ad0f626715c)
 
-![bucket2](https://github.com/uzairmansoor/dataFeed-MSK-cdk/assets/82077348/07044922-20a8-42cc-b014-17ab7093cf33)
+![bucket2](https://github.com/uzairmansoor/dataFeed-MSK-cdk/assets/82077348/d4bb6283-0f38-4e06-9779-edd7fbaf084f)
 
 ![bucket3](https://github.com/uzairmansoor/dataFeed-MSK-cdk/assets/82077348/de60279e-b60c-4f0a-9ae3-d4b1e04138ec)
 
