@@ -6,13 +6,13 @@
 
 To deploy this solution, you need to do the following: 
  
-•	Create an AWS account if you do not already have one and log in. Then create an IAM user with full admin permissions as described at Create an Administrator User. Log out and log back into the AWS console as this IAM admin user.
+•	[Create an AWS account](https://portal.aws.amazon.com/gp/aws/developer/registration/index.html) if you do not already have one and log in. Then create an IAM user with full admin permissions as described at [Create an Administrator](https://docs.aws.amazon.com/streams/latest/dev/setting-up.html) User. Log out and log back into the AWS console as this IAM admin user.
 
 **NOTE:** Ensure you have two AWS accounts to proceed with this blog.
 
 **NOTE**: This entire setup may take up to 1 hour and 30 minutes.
 
-•	Install the AWS Command Line Interface (AWS CLI) on your local development machine and create a profile for the admin user as described at Set Up the AWS CLI.   
+•	Install the AWS Command Line Interface (AWS CLI) on your local development machine and create a profile for the admin user as described at [Set Up the AWS CLI](https://docs.aws.amazon.com/streams/latest/dev/setup-awscli.html).   
 
 •	Create a Key Pair named “*awsBlog-dev-app-us-east-1*” in both accounts to enable connections for our producer and consumer EC2 instances. If you change the Key Pair's name, ensure you update the “keyPairName” parameter in the *parameters.py* file located at
 “*dataFeedMsk\dataFeedMsk\parameters.py*”.
@@ -82,7 +82,7 @@ Make sure you are in the directory where the app1.py file is located.: *dataFeed
 
 ![bucket1](https://github.com/uzairmansoor/dataFeed-MSK-cdk/assets/82077348/81459024-5557-4f50-a8e6-8ad0f626715c)
 
-![bucket2](https://github.com/uzairmansoor/dataFeed-MSK-cdk/assets/82077348/07044922-20a8-42cc-b014-17ab7093cf33)
+![bucket2](https://github.com/uzairmansoor/dataFeed-MSK-cdk/assets/82077348/d4bb6283-0f38-4e06-9779-edd7fbaf084f)
 
 ![bucket3](https://github.com/uzairmansoor/dataFeed-MSK-cdk/assets/82077348/de60279e-b60c-4f0a-9ae3-d4b1e04138ec)
 

@@ -200,11 +200,7 @@ class dataFeedMsk(Stack):
         openSearchSecrets = secretsmanager.Secret(self, "openSearchSecrets",
             description = "Secrets for OpenSearch",
             secret_name = f"{parameters.project}-{parameters.env}-{parameters.app}-openSearchSecrets",
-            generate_secret_string = secretsmanager.SecretStringGenerator(
-                generate_string_key = "password",
-                secret_string_template = '{"username": "%s"}' % parameters.openSearchMasterUsername,
-                exclude_punctuation = True
-            ),
+            generate_secret_string = secretsmanager.SecretStringGenerator(),
             encryption_key = customerManagedKey
         )
         tags.of(openSearchSecrets).add("name", f"{parameters.project}-{parameters.env}-{parameters.app}-openSearchSecrets")
@@ -378,8 +374,8 @@ class dataFeedMsk(Stack):
         tags.of(getAzIdsParamStore).add("app", parameters.app)
 
 #We are unable to activate the SASL/SCRAM authentication method for producer authentication during the cluster creation process
-        enableSaslScramProducerAuth = parameters.enableSaslScramProducerAuth
-        if enableSaslScramProducerAuth:
+        enableSaslScramClientAuth = parameters.enableSaslScramClientAuth
+        if enableSaslScramClientAuth:
             mskCluster.add_property_override(
                 'BrokerNodeGroupInfo.ConnectivityInfo',
                 {
