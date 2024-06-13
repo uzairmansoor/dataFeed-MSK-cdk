@@ -9,20 +9,13 @@ To deploy this solution, you need to do the following:
 •	Create an AWS account if you do not already have one and log in. Then create an IAM user with full admin permissions as described at Create an Administrator User. Log out and log back into the AWS console as this IAM admin user.
 
 **NOTE:** Ensure you have two AWS accounts to proceed with this blog.
+
 **NOTE**: This entire setup may take up to 1 hour and 30 minutes.
 
 •	Install the AWS Command Line Interface (AWS CLI) on your local development machine and create a profile for the admin user as described at Set Up the AWS CLI.   
 
 •	Create a Key Pair named “*awsBlog-dev-app-us-east-1*” in both accounts to enable connections for our producer and consumer EC2 instances. If you change the Key Pair's name, ensure you update the “keyPairName” parameter in the *parameters.py* file located at
-“*dataFeedMsk\dataFeedMsk-awsBlog-repo-us-east-1\dataFeedMsk\parameters.py*”.
-
-•	Create an S3 bucket named “*awsblog-dev-app-us-east-1-ACCOUNT-NUMBER*” and update the “*s3BucketName*” parameter in the *parameters.py* file accordingly. Upload the provided “*flink-app-1.0.jar*” file, placed at the following link. Create a folder python-scripts. Now unzip **kafka-blog.zip** and place the file “*script/ec2-script-live.py” and “script/requirement.txt*” at python-scripts.
-
-![bucket1](https://github.com/uzairmansoor/dataFeed-MSK-cdk/assets/82077348/81459024-5557-4f50-a8e6-8ad0f626715c)
-
-![bucket2](https://github.com/uzairmansoor/dataFeed-MSK-cdk/assets/82077348/07044922-20a8-42cc-b014-17ab7093cf33)
-
-![bucket3](https://github.com/uzairmansoor/dataFeed-MSK-cdk/assets/82077348/de60279e-b60c-4f0a-9ae3-d4b1e04138ec)
+“*dataFeedMsk\dataFeedMsk\parameters.py*”.
 
 •	Install the latest version of AWS CDK globally
 
@@ -51,7 +44,7 @@ AWS CDK is used to develop parameterized scripts for building the necessary infr
 
 2.	Install the necessary libraries
 
-*cd dataFeedMSK\dataFeedMsk-awsBlog-repo-us-east-1*
+*cd dataFeedMSK*
 
 *pip install –r requirements.txt* [**Run this command in Powershell**]
 
@@ -75,7 +68,7 @@ AWS CDK is used to develop parameterized scripts for building the necessary infr
 
 •	Update the mskCrossAccountId parameter in the *parameters.py* file with your AWS cross-account ID.
 
-Ensure that you are on the correct path: *dataFeedMsk\dataFeedMsk-awsBlog-repo-us-east-1*
+Make sure you are in the directory where the app1.py file is located.: *dataFeedMsk\*
 
 *cdk deploy --all --app "python app1.py" --profile {your_profile_name}*
 
@@ -85,11 +78,19 @@ Ensure that you are on the correct path: *dataFeedMsk\dataFeedMsk-awsBlog-repo-u
 
 **NOTE**: This step can take up to 45-60 minutes.
 
-4.	Now, set the *enableSaslScramClientAuth*, *enableClusterConfig*, and *enableClusterPolicy* parameters in the *parameters.py* file to True. 
+4. This deployment creates an S3 bucket to store the solution artifacts, which include the Flink application JAR file, Python scripts, and user data for both the producer and consumer.
+
+![bucket1](https://github.com/uzairmansoor/dataFeed-MSK-cdk/assets/82077348/81459024-5557-4f50-a8e6-8ad0f626715c)
+
+![bucket2](https://github.com/uzairmansoor/dataFeed-MSK-cdk/assets/82077348/07044922-20a8-42cc-b014-17ab7093cf33)
+
+![bucket3](https://github.com/uzairmansoor/dataFeed-MSK-cdk/assets/82077348/de60279e-b60c-4f0a-9ae3-d4b1e04138ec)
+
+5.	Now, set the *enableSaslScramClientAuth*, *enableClusterConfig*, and *enableClusterPolicy* parameters in the *parameters.py* file to True. 
  
 This step will enable the SASL/SCRAM client authentication, Cluster configuration and PrivateLink.
 
-Ensure that you are on the correct path: *dataFeedMsk\dataFeedMsk-awsBlog-repo-us-east-1*
+Make sure you are in the directory where the app1.py file is located.: *dataFeedMsk\*
 
 *cdk deploy --all --app "python app1.py" --profile {your_profile_name}*
 
@@ -153,7 +154,7 @@ Once bootstrapped, the configuration of the "CDK Toolkit" stack will be displaye
 
 3.	In the final iteration, we will deploy the cross-account resources, which include the VPC, Security Groups, IAM Roles, and MSK Cluster VPC Connection.
 
-Ensure that you are on the correct path: *dataFeedMsk\dataFeedMsk-awsBlog-repo-us-east-1*
+Make sure you are in the directory where the app2.py file is located.: *dataFeedMsk\*
 
 *cdk deploy --all --app "python app2.py" --profile {your_profile_name}*
 
