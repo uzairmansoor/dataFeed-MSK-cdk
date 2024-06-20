@@ -46,7 +46,7 @@ mskTopicName1 = "googl"                     #Name of the first MSK topic
 mskTopicName2 = "tsla"                      #Name of the second MSK topic
 mskTopicName3 = "googlenhanced"             #Name of the third MSK topic
 mskTopicName4 = "teslenhanced"              #Name of the fourth MSK topic
-mskCrossAccountId = "576737476547"          #Cross Account ID for MSK
+mskCrossAccountId = "007756798683"          #Cross Account ID for MSK
 
 ###   MSK Producer EC2 Instance Parameters   ### 
 

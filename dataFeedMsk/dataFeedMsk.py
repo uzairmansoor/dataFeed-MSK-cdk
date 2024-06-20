@@ -8,6 +8,7 @@ from aws_cdk import (
     aws_s3 as s3,
     aws_msk as msk,
     aws_ssm as ssm,
+    aws_ram as ram,
     aws_secretsmanager as secretsmanager,
     aws_opensearchservice as opensearch,
     aws_kms as kms,
@@ -226,7 +227,7 @@ class dataFeedMsk(Stack):
         mskConsumerPwdParamStore = ssm.StringParameter(self, "mskConsumerPwdParamStore",
             parameter_name = f"blogAws-{parameters.env}-mskConsumerPwd-ssmParamStore",
             string_value = mskConsumerSecretPassword,
-            tier = ssm.ParameterTier.STANDARD
+            tier = ssm.ParameterTier.ADVANCED
         )
         tags.of(mskConsumerPwdParamStore).add("name", f"{parameters.project}-{parameters.env}-{parameters.app}-mskConsumerPwdParamStore")
         tags.of(mskConsumerPwdParamStore).add("project", parameters.project)

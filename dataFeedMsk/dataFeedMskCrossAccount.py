@@ -12,8 +12,11 @@ from aws_cdk import (
     aws_s3_deployment as s3deployment,
     Aws as AWS
 )
+from dotenv import load_dotenv
 import os
 from . import parameters
+
+load_dotenv()
 
 class dataFeedMskCrossAccount(Stack):
 
@@ -109,8 +112,6 @@ class dataFeedMskCrossAccount(Stack):
 #############       S3 Bucket Configurations      #############
 #############       Deploying Artifacts from source bucket to destination bucket      #############
 
-        # bucket = s3.Bucket.from_bucket_name(self, "s3BucketAwsBlogArtifacts", parameters.s3BucketName)
-
         s3SourceBucket = s3.Bucket.from_bucket_name(self, "s3SourceBucketArtifacts", parameters.s3BucketName)
  
         s3DestinationBucket = s3.Bucket(self, "s3DestinationBucket",
@@ -191,6 +192,8 @@ class dataFeedMskCrossAccount(Stack):
 
 #############      Consumer EC2 Instance Configurations      #############
         
+        mskConsumerPassword = os.environ.get('MSK_CONSUMER_PASSWORD')
+
         user_data = ec2.UserData.for_linux()
 
         user_data.add_s3_download_command(
@@ -203,7 +206,7 @@ class dataFeedMskCrossAccount(Stack):
             user_data_script = file.read()
 
         user_data_script = user_data_script.replace("${MSK_CONSUMER_USERNAME}", parameters.mskConsumerUsername)
-        user_data_script = user_data_script.replace("${MSK_CONSUMER_PASSWORD}", parameters.mskConsumerPwdParamStoreValue)
+        user_data_script = user_data_script.replace("${MSK_CONSUMER_PASSWORD}", mskConsumerPassword)
 
         user_data.add_commands(user_data_script)
         
@@ -225,33 +228,6 @@ class dataFeedMskCrossAccount(Stack):
         tags.of(kafkaConsumerEC2Instance).add("project", parameters.project)
         tags.of(kafkaConsumerEC2Instance).add("env", parameters.env)
         tags.of(kafkaConsumerEC2Instance).add("app", parameters.app)
-
-        # kafkaConsumerEC2Instance.user_data.add_commands(
-        #     "sudo su",
-        #     "sudo yum update -y",
-        #     "sudo yum -y install java-11",
-        #     "sudo yum install jq -y",
-        #     "wget https://archive.apache.org/dist/kafka/3.5.1/kafka_2.13-3.5.1.tgz",
-        #     "tar -xzf kafka_2.13-3.5.1.tgz",
-        #     "cd kafka_2.13-3.5.1/libs",
-        #     "wget https://github.com/aws/aws-msk-iam-auth/releases/download/v1.1.1/aws-msk-iam-auth-1.1.1-all.jar",
-        #     "cd /home/ec2-user",
-        #     "cat <<EOF > /home/ec2-user/users_jaas.conf",
-        #     "KafkaClient {",
-        #     f"    org.apache.kafka.common.security.scram.ScramLoginModule required",
-        #     f'    username="{parameters.mskCustomerUsername}"',
-        #     f'    password="{parameters.mskCustomerPwdParamStoreValue}";',
-        #     "};",
-        #     "EOF",
-        #     "echo 'export KAFKA_OPTS=-Djava.security.auth.login.config=/home/ec2-user/users_jaas.conf' >> ~/.bashrc",
-        #     "mkdir tmp",
-        #     "cp /usr/lib/jvm/java-11-amazon-corretto.x86_64/lib/security/cacerts /home/ec2-user/tmp/kafka.client.truststore.jks",
-        #     "cat <<EOF > /home/ec2-user/customer_sasl.properties",
-        #     f"security.protocol=SASL_SSL",
-        #     f"sasl.mechanism=SCRAM-SHA-512",
-        #     f"ssl.truststore.location=/home/ec2-user/tmp/kafka.client.truststore.jks",
-        #     "EOF",
-        # )
 
 #############       MSK Cluster VPC Connection      #############
 
