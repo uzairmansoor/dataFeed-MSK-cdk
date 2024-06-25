@@ -14,7 +14,7 @@ To deploy this solution, you need to do the following:
 
 •	Install the AWS Command Line Interface (AWS CLI) on your local development machine and create a profile for the admin user as described at [Set Up the AWS CLI](https://docs.aws.amazon.com/streams/latest/dev/setup-awscli.html).   
 
-•	Create a Key Pair named “*awsBlog-dev-app-us-east-1*” in both accounts to enable connections for our producer and consumer EC2 instances. If you change the Key Pair's name, ensure you update the “keyPairName” parameter in the *parameters.py* file located at
+•	Create a Key Pair named “*awsBlog-dev-app-us-east-1*” in both accounts to enable connections for our producer and consumer EC2 instances. If you change the Key Pair's name, ensure you update the “producerEc2KeyPairName” and “consumerEc2KeyPairName” parameter in the *parameters.py* file located at
 “*dataFeedMsk\dataFeedMsk\parameters.py*”.
 
 •	Install the latest version of AWS CDK globally
@@ -48,27 +48,49 @@ AWS CDK is used to develop parameterized scripts for building the necessary infr
 
 *pip install –r requirements.txt* [**Run this command in Powershell**]
 
-3.	Set the environment variables
+We need to create an IAM Role for an EC2 instance in the Consumer account. This will allow us to securely grant access to the Consumer Secret Password from the Producer Account to the Consume EC2 instance in the Consumer Account.
+
+3.	Set the environment variables for Consumer AWS Account
+
+First, configure the AWS CLI credentials for your consumer AWS account 
 
 *set CDK_DEFAULT_ACCOUNT={your_aws_account_id}*
 
 *set CDK_DEFAULT_REGION=us-east-1*
 
-4.	Bootstrap the first AWS environment (**Producer AWS Account**)
+![set_cmd](https://github.com/uzairmansoor/dataFeed-MSK-cdk/assets/82077348/8dbc608b-7cf3-4487-a5d1-81ba8466767b)
+
+Now, execute the following command in the **dataFeedMsk/** directory, where the *ec2ConsumerPolicy.json* file is located. If you change the EC2 Consumer Role name, ensure you update the “ec2ConsumerRoleName” parameter in the *parameters.py* file.
+
+*aws iam create-role --role-name awsblog-dev-app-consumerEc2Role --assume-role-policy-document file://ec2ConsumerPolicy.json*
+
+![iamRole](https://github.com/uzairmansoor/dataFeed-MSK-cdk/assets/82077348/418bf8d1-e180-4b6e-b24f-065aaa917271)
+
+4.	Set the environment variables for Producer AWS Account
+
+Now, configure the AWS CLI credentials for your producer AWS account. 
+
+*set CDK_DEFAULT_ACCOUNT={your_aws_account_id}*
+
+*set CDK_DEFAULT_REGION=us-east-1*
+
+![set_cmd](https://github.com/uzairmansoor/dataFeed-MSK-cdk/assets/82077348/cacb53af-20c2-4c01-a4b4-73f5fb72a7ff)
+
+5.	Bootstrap the first AWS environment (**Producer AWS Account**)
 
 *cdk bootstrap aws://{your_aws_account_id}/{your_aws_region}* [**Run this command in CMD**]	
 
-5.	Once bootstrapped, the configuration of the "**CDK Toolkit**" stack will be displayed as follows within the Cloud Formation console.
+6.	Once bootstrapped, the configuration of the "**CDK Toolkit**" stack will be displayed as follows within the Cloud Formation console.
 
 ![cdk_tool_kit](https://github.com/uzairmansoor/dataFeed-MSK-cdk/assets/82077348/5d6d0b40-7c29-4f0d-8af3-1b9fb896f8f3)
 
-3.	This step involves creating a VPC and deploying the Amazon MSK cluster within it. Additionally, it sets up an Apache Flink application, establishes an OpenSearch domain, and launches a new EC2 instance to handle the retrieval of raw exchange data.
+7.	This step involves creating a VPC and deploying the Amazon MSK cluster within it. Additionally, it sets up an Apache Flink application, establishes an OpenSearch domain, and launches a new EC2 instance to handle the retrieval of raw exchange data.
 
 •	Make sure that the *enableSaslScramClientAuth*, *enableClusterConfig*, and *enableClusterPolicy* parameters in the *parameters.py* file are set to False.
 
 •	Update the mskCrossAccountId parameter in the *parameters.py* file with your AWS cross-account ID.
 
-Make sure you are in the directory where the app1.py file is located.: *dataFeedMsk\*
+Make sure you are in the directory where the app1.py file is located.: **dataFeedMsk/**
 
 *cdk deploy --all --app "python app1.py" --profile {your_profile_name}*
 
@@ -78,7 +100,7 @@ Make sure you are in the directory where the app1.py file is located.: *dataFeed
 
 **NOTE**: This step can take up to 45-60 minutes.
 
-4. This deployment creates an S3 bucket to store the solution artifacts, which include the Flink application JAR file, Python scripts, and user data for both the producer and consumer.
+8. This deployment creates an S3 bucket to store the solution artifacts, which include the Flink application JAR file, Python scripts, and user data for both the producer and consumer.
 
 ![bucket1](https://github.com/uzairmansoor/dataFeed-MSK-cdk/assets/82077348/81459024-5557-4f50-a8e6-8ad0f626715c)
 
@@ -86,11 +108,11 @@ Make sure you are in the directory where the app1.py file is located.: *dataFeed
 
 ![bucket3](https://github.com/uzairmansoor/dataFeed-MSK-cdk/assets/82077348/de60279e-b60c-4f0a-9ae3-d4b1e04138ec)
 
-5.	Now, set the *enableSaslScramClientAuth*, *enableClusterConfig*, and *enableClusterPolicy* parameters in the *parameters.py* file to True. 
+9.	Now, set the *enableSaslScramClientAuth*, *enableClusterConfig*, and *enableClusterPolicy* parameters in the *parameters.py* file to True. 
  
 This step will enable the SASL/SCRAM client authentication, Cluster configuration and PrivateLink.
 
-Make sure you are in the directory where the app1.py file is located.: *dataFeedMsk\*
+Make sure you are in the directory where the app1.py file is located.: **dataFeedMsk/**
 
 *cdk deploy --all --app "python app1.py" --profile {your_profile_name}*
 
@@ -109,6 +131,14 @@ Before deploying the cross-account stack, we need to modify some parameters in t
 ![msk_cluster_2](https://github.com/uzairmansoor/dataFeed-MSK-cdk/assets/82077348/5581dcfe-2039-45ab-9fbf-6b8a2c2317ea)
 
 •	If you haven't changed the name of the MSK cluster, there's no need to update the “**mskClusterName**” parameter. If you have, update it with your own MSK Cluster name.
+
+•	Navigate to "Secrets Manager" in AWS Cosole and select "AmazonMSK_/-awsblog-dev-app-mskConsumerSecret." Copy the "Secret ARN" and update the "mskConsumerSecretArn" parameter in the *parameters.py* file.
+
+![msk_consumer_secret](https://github.com/uzairmansoor/dataFeed-MSK-cdk/assets/82077348/1ef5a187-4cf2-481b-aa08-d2e81faf8b5c)
+
+•	Navigate to "Key Management Service" in the AWS Console, then go to "Customer Managed Keys" and select "awsblog-dev-app-sasl/scram-key." Copy the "ARN" and update the "customerManagedKeyArn" parameter in the parameters.py file.
+
+![kms_arn](https://github.com/uzairmansoor/dataFeed-MSK-cdk/assets/82077348/ce561c12-edda-4eec-bace-90caa752fb5c)
 
 •	Now navigate to Systems Manager (SSM) Parameter Store.
 
@@ -138,11 +168,15 @@ For example, in the SSM Parameter Store, the values are "use1-az4" and "use1-az6
 
 Note: Ensure that the Availability Zone IDs for both of your accounts are the same.
 
-1.	Now, setup the AWS CLI credentials of your consumer AWS Account Set the environment variables
+1.	Now, setup the AWS CLI credentials of your consumer AWS Account 
+
+Set the environment variables
 
 *set CDK_DEFAULT_ACCOUNT={your_aws_account_id}*
 
 *set CDK_DEFAULT_REGION=us-east-1*
+
+![set_cmd](https://github.com/uzairmansoor/dataFeed-MSK-cdk/assets/82077348/fc874129-f079-44c8-b336-66fd2d609276)
 
 2.	Bootstrap the first AWS environment (Consumer AWS Account)
 
@@ -154,7 +188,7 @@ Once bootstrapped, the configuration of the "CDK Toolkit" stack will be displaye
 
 3.	In the final iteration, we will deploy the cross-account resources, which include the VPC, Security Groups, IAM Roles, and MSK Cluster VPC Connection.
 
-Make sure you are in the directory where the app2.py file is located.: *dataFeedMsk\*
+Make sure you are in the directory where the app2.py file is located.: **dataFeedMsk/**
 
 *cdk deploy --all --app "python app2.py" --profile {your_profile_name}*
 
