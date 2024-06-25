@@ -58,6 +58,8 @@ First, configure the AWS CLI credentials for your consumer AWS account
 
 *set CDK_DEFAULT_REGION=us-east-1*
 
+![image](https://github.com/uzairmansoor/dataFeed-MSK-cdk/assets/82077348/2d273c1c-d598-4572-8909-eb514185909b)
+
 Now, execute the following command in the **dataFeedMsk/** directory, where the *ec2ConsumerPolicy.json* file is located. If you change the EC2 Consumer Role name, ensure you update the “ec2ConsumerRoleName” parameter in the *parameters.py* file.
 
 *aws iam create-role --role-name awsblog-dev-app-consumerEc2Role --assume-role-policy-document file://ec2ConsumerPolicy.json*
@@ -71,6 +73,8 @@ Now, configure the AWS CLI credentials for your producer AWS account.
 *set CDK_DEFAULT_ACCOUNT={your_aws_account_id}*
 
 *set CDK_DEFAULT_REGION=us-east-1*
+
+![set_cmd](https://github.com/uzairmansoor/dataFeed-MSK-cdk/assets/82077348/d1e5a7a3-12e1-4e7f-ac4b-2d23bce87091)
 
 5.	Bootstrap the first AWS environment (**Producer AWS Account**)
 
@@ -171,6 +175,8 @@ Set the environment variables
 *set CDK_DEFAULT_ACCOUNT={your_aws_account_id}*
 
 *set CDK_DEFAULT_REGION=us-east-1*
+
+![set_cmd](https://github.com/uzairmansoor/dataFeed-MSK-cdk/assets/82077348/7e12d055-78a8-4284-99fc-6d1542db269d)
 
 2.	Bootstrap the first AWS environment (Consumer AWS Account)
 
