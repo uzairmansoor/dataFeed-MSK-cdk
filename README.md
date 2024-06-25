@@ -58,7 +58,7 @@ First, configure the AWS CLI credentials for your consumer AWS account
 
 *set CDK_DEFAULT_REGION=us-east-1*
 
-![image](https://github.com/uzairmansoor/dataFeed-MSK-cdk/assets/82077348/2d273c1c-d598-4572-8909-eb514185909b)
+![set_cmd](https://github.com/uzairmansoor/dataFeed-MSK-cdk/assets/82077348/8dbc608b-7cf3-4487-a5d1-81ba8466767b)
 
 Now, execute the following command in the **dataFeedMsk/** directory, where the *ec2ConsumerPolicy.json* file is located. If you change the EC2 Consumer Role name, ensure you update the “ec2ConsumerRoleName” parameter in the *parameters.py* file.
 
@@ -74,7 +74,7 @@ Now, configure the AWS CLI credentials for your producer AWS account.
 
 *set CDK_DEFAULT_REGION=us-east-1*
 
-![set_cmd](https://github.com/uzairmansoor/dataFeed-MSK-cdk/assets/82077348/d1e5a7a3-12e1-4e7f-ac4b-2d23bce87091)
+![set_cmd](https://github.com/uzairmansoor/dataFeed-MSK-cdk/assets/82077348/cacb53af-20c2-4c01-a4b4-73f5fb72a7ff)
 
 5.	Bootstrap the first AWS environment (**Producer AWS Account**)
 
@@ -176,7 +176,7 @@ Set the environment variables
 
 *set CDK_DEFAULT_REGION=us-east-1*
 
-![set_cmd](https://github.com/uzairmansoor/dataFeed-MSK-cdk/assets/82077348/7e12d055-78a8-4284-99fc-6d1542db269d)
+![set_cmd](https://github.com/uzairmansoor/dataFeed-MSK-cdk/assets/82077348/fc874129-f079-44c8-b336-66fd2d609276)
 
 2.	Bootstrap the first AWS environment (Consumer AWS Account)
 
