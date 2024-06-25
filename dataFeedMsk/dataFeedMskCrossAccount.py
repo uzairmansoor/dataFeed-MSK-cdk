@@ -53,7 +53,7 @@ class dataFeedMskCrossAccount(Stack):
 
 #############       EC2 Key Pair Configurations      #############
 
-        keyPair = ec2.KeyPair.from_key_pair_name(self, "ec2KeyPair", parameters.keyPairName)
+        keyPair = ec2.KeyPair.from_key_pair_name(self, "ec2KeyPair", parameters.consumerEc2KeyPairName)
 
 #############       Security Group Configurations      #############
 
@@ -100,10 +100,7 @@ class dataFeedMskCrossAccount(Stack):
             description = "Allow all TCP traffic from sgMskCluster to sgMskCluster"
         )
 
-        consumerEc2Role = iam.Role(self, "consumerEc2Role",
-            role_name = f"{parameters.project}-{parameters.env}-{parameters.app}-consumerEc2Role",
-            assumed_by=iam.ServicePrincipal("ec2.amazonaws.com")
-        )
+        consumerEc2Role = iam.Role.from_role_name(self, "consumerEc2Role", role_name=parameters.ec2ConsumerRoleName)
         tags.of(consumerEc2Role).add("name", f"{parameters.project}-{parameters.env}-{parameters.app}-consumerEc2Role")
         tags.of(consumerEc2Role).add("project", parameters.project)
         tags.of(consumerEc2Role).add("env", parameters.env)
@@ -119,7 +116,8 @@ class dataFeedMskCrossAccount(Stack):
             block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
             versioned=True,
             encryption=s3.BucketEncryption.S3_MANAGED,
-            removal_policy=RemovalPolicy.RETAIN
+            auto_delete_objects=True,
+            removal_policy=RemovalPolicy.DESTROY
         )
  
         s3ArtifactsDeployment = s3deployment.BucketDeployment(self, 's3ArtifactsDeployment',
@@ -185,14 +183,30 @@ class dataFeedMskCrossAccount(Stack):
                         resources = [f"arn:aws:s3:::{s3DestinationBucket.bucket_name}",
                                     f"arn:aws:s3:::{s3DestinationBucket.bucket_name}/*"
                         ]
+                    ),
+                    iam.PolicyStatement(
+                        effect = iam.Effect.ALLOW,
+                        actions=[
+                            "secretsmanager:GetSecretValue"
+                        ],
+                        resources = [
+                            parameters.mskConsumerSecretArn
+                        ]
+                    ),
+                    iam.PolicyStatement(
+                        effect = iam.Effect.ALLOW,
+                        actions=[
+                            "kms:Decrypt"
+                        ],
+                        resources = [
+                            parameters.customerManagedKeyArn
+                        ]
                     )
                 ]
             )
         )
 
 #############      Consumer EC2 Instance Configurations      #############
-        
-        mskConsumerPassword = os.environ.get('MSK_CONSUMER_PASSWORD')
 
         user_data = ec2.UserData.for_linux()
 
@@ -206,7 +220,8 @@ class dataFeedMskCrossAccount(Stack):
             user_data_script = file.read()
 
         user_data_script = user_data_script.replace("${MSK_CONSUMER_USERNAME}", parameters.mskConsumerUsername)
-        user_data_script = user_data_script.replace("${MSK_CONSUMER_PASSWORD}", mskConsumerPassword)
+        user_data_script = user_data_script.replace("${MSK_CONSUMER_SECRET_ARN}", parameters.mskConsumerSecretArn)
+        user_data_script = user_data_script.replace("${AWS_REGION}", self.region)
 
         user_data.add_commands(user_data_script)
         
@@ -229,7 +244,7 @@ class dataFeedMskCrossAccount(Stack):
         tags.of(kafkaConsumerEC2Instance).add("env", parameters.env)
         tags.of(kafkaConsumerEC2Instance).add("app", parameters.app)
 
-#############       MSK Cluster VPC Connection      #############
+# #############       MSK Cluster VPC Connection      #############
 
         mskClusterVpcConnection = msk.CfnVpcConnection(self, "mskClusterVpcConnection",
             authentication="SASL_SCRAM",

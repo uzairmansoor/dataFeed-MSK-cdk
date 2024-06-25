@@ -19,9 +19,12 @@ from aws_cdk import (
     aws_s3_deployment as s3deployment,
     Aws as AWS
 )
+from dotenv import load_dotenv
 import os
 from pathlib import Path
 from . import parameters
+
+load_dotenv()
 
 class dataFeedMsk(Stack):
 
@@ -58,7 +61,7 @@ class dataFeedMsk(Stack):
 
 #############       EC2 Key Pair Configurations      #############
 
-        keyPair = ec2.KeyPair.from_key_pair_name(self, "ec2KeyPair", parameters.keyPairName)
+        keyPair = ec2.KeyPair.from_key_pair_name(self, "ec2KeyPair", parameters.producerEc2KeyPairName)
 
 #############       Security Group Configurations      #############
 
@@ -133,8 +136,6 @@ class dataFeedMsk(Stack):
 #############       S3 Bucket Configurations      #############
 #############       Deploying Artifacts from source bucket to destination bucket      #############
 
-        bucket = s3.Bucket.from_bucket_name(self, "s3BucketAwsBlogArtifacts", parameters.s3BucketName)
-
         s3SourceBucket = s3.Bucket.from_bucket_name(self, "s3SourceBucketArtifacts", parameters.s3BucketName)
  
         s3DestinationBucket = s3.Bucket(self, "s3DestinationBucket",
@@ -142,7 +143,8 @@ class dataFeedMsk(Stack):
             block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
             versioned=True,
             encryption=s3.BucketEncryption.S3_MANAGED,
-            removal_policy=RemovalPolicy.RETAIN
+            auto_delete_objects=True,
+            removal_policy=RemovalPolicy.DESTROY
         )
  
         s3ArtifactsDeployment = s3deployment.BucketDeployment(self, 's3ArtifactsDeployment',
@@ -163,6 +165,23 @@ class dataFeedMsk(Stack):
         tags.of(customerManagedKey).add("project", parameters.project)
         tags.of(customerManagedKey).add("env", parameters.env)
         tags.of(customerManagedKey).add("app", parameters.app)
+
+        customerManagedKeyPolicy = iam.PolicyStatement(
+            effect=iam.Effect.ALLOW,
+            actions=[
+                "kms:Decrypt",
+                "kms:Encrypt",
+                "kms:GenerateDataKey",
+                "kms:DescribeKey"
+            ],
+            resources=[
+                f"arn:aws:kms:{AWS.REGION}:{AWS.ACCOUNT_ID}:key/*"
+            ],
+            principals=[
+                iam.ArnPrincipal(f"arn:aws:iam::{parameters.mskCrossAccountId}:role/{parameters.ec2ConsumerRoleName}")
+            ]
+        )
+        customerManagedKey.add_to_resource_policy(customerManagedKeyPolicy)
 
 #############       Secrets Manager Configurations      #############
 
@@ -197,6 +216,20 @@ class dataFeedMsk(Stack):
         tags.of(mskConsumerSecret).add("env", parameters.env)
         tags.of(mskConsumerSecret).add("app", parameters.app)
         mskConsumerSecretPassword= mskConsumerSecret.secret_value_from_json("password").unsafe_unwrap()
+
+        mskConsumerSecretPolicy = iam.PolicyStatement(
+            effect=iam.Effect.ALLOW,
+            actions=[
+                "secretsmanager:GetSecretValue"
+            ],
+            resources=[
+                f"arn:aws:secretsmanager:{AWS.REGION}:{AWS.ACCOUNT_ID}:secret:AmazonMSK_/-{parameters.project}-{parameters.env}-{parameters.app}-mskConsumerSecret-*"
+            ],
+            principals=[
+                iam.ArnPrincipal(f"arn:aws:iam::{parameters.mskCrossAccountId}:role/{parameters.ec2ConsumerRoleName}")
+            ]
+        )
+        mskConsumerSecret.add_to_resource_policy(mskConsumerSecretPolicy)
 
         openSearchSecrets = secretsmanager.Secret(self, "openSearchSecrets",
             description = "Secrets for OpenSearch",
@@ -408,6 +441,7 @@ class dataFeedMsk(Stack):
             print("Cluster Configuration is not associated with the MSK Cluster")
 
 #In the second iteration, we'll attach a cluster policy to address the Private Link scenario.
+        
         enableClusterPolicy = parameters.enableClusterPolicy
         if enableClusterPolicy:
             mskClusterPolicy = msk.CfnClusterPolicy(self, "mskClusterPolicy",

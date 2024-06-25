@@ -14,7 +14,7 @@ To deploy this solution, you need to do the following:
 
 •	Install the AWS Command Line Interface (AWS CLI) on your local development machine and create a profile for the admin user as described at [Set Up the AWS CLI](https://docs.aws.amazon.com/streams/latest/dev/setup-awscli.html).   
 
-•	Create a Key Pair named “*awsBlog-dev-app-us-east-1*” in both accounts to enable connections for our producer and consumer EC2 instances. If you change the Key Pair's name, ensure you update the “keyPairName” parameter in the *parameters.py* file located at
+•	Create a Key Pair named “*awsBlog-dev-app-us-east-1*” in both accounts to enable connections for our producer and consumer EC2 instances. If you change the Key Pair's name, ensure you update the “producerEc2KeyPairName” and “consumerEc2KeyPairName” parameter in the *parameters.py* file located at
 “*dataFeedMsk\dataFeedMsk\parameters.py*”.
 
 •	Install the latest version of AWS CDK globally
@@ -48,7 +48,23 @@ AWS CDK is used to develop parameterized scripts for building the necessary infr
 
 *pip install –r requirements.txt* [**Run this command in Powershell**]
 
+We need to create an IAM Role for an EC2 instance in the Consumer account. This will allow us to securely grant access to the Consumer Secret Password from the Producer Account to the Consume EC2 instance in the Consumer Account.
+
 3.	Set the environment variables
+
+First, setup the AWS CLI credentials of your consumer AWS Account 
+
+*set CDK_DEFAULT_ACCOUNT={your_aws_account_id}*
+
+*set CDK_DEFAULT_REGION=us-east-1*
+
+Now, execute the following command in the dataFeedMsk directory, where the *ec2ConsumerPolicy.json* file is located.
+
+*aws iam create-role --role-name awsblog-dev-app-consumerEc2Role --assume-role-policy-document file://ec2ConsumerPolicy.json*
+
+3.	Set the environment variables
+
+First, setup the AWS CLI credentials of your producer AWS Account 
 
 *set CDK_DEFAULT_ACCOUNT={your_aws_account_id}*
 
@@ -138,7 +154,9 @@ For example, in the SSM Parameter Store, the values are "use1-az4" and "use1-az6
 
 Note: Ensure that the Availability Zone IDs for both of your accounts are the same.
 
-1.	Now, setup the AWS CLI credentials of your consumer AWS Account Set the environment variables
+1.	Now, setup the AWS CLI credentials of your consumer AWS Account 
+
+Set the environment variables
 
 *set CDK_DEFAULT_ACCOUNT={your_aws_account_id}*
 
