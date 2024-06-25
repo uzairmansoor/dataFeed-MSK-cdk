@@ -128,7 +128,11 @@ Before deploying the cross-account stack, we need to modify some parameters in t
 
 •	Navigate to "Secrets Manager" in AWS Cosole and select "AmazonMSK_/-awsblog-dev-app-mskConsumerSecret." Copy the "Secret ARN" and update the "mskConsumerSecretArn" parameter in the *parameters.py* file.
 
+![msk_consumer_secret](https://github.com/uzairmansoor/dataFeed-MSK-cdk/assets/82077348/1ef5a187-4cf2-481b-aa08-d2e81faf8b5c)
+
 •	Navigate to "Key Management Service" in the AWS Console, then go to "Customer Managed Keys" and select "awsblog-dev-app-sasl/scram-key." Copy the "ARN" and update the "customerManagedKeyArn" parameter in the parameters.py file.
+
+![kms_arn](https://github.com/uzairmansoor/dataFeed-MSK-cdk/assets/82077348/ce561c12-edda-4eec-bace-90caa752fb5c)
 
 •	Now navigate to Systems Manager (SSM) Parameter Store.
 
