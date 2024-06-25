@@ -18,12 +18,8 @@ from aws_cdk import (
     aws_s3_deployment as s3deployment,
     Aws as AWS
 )
-from dotenv import load_dotenv
 import os
-from pathlib import Path
 from . import parameters
-
-load_dotenv()
 
 class dataFeedMsk(Stack):
 

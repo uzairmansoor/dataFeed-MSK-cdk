@@ -12,11 +12,8 @@ from aws_cdk import (
     aws_msk as msk,
     aws_s3_deployment as s3deployment
 )
-from dotenv import load_dotenv
 import os
 from . import parameters
-
-load_dotenv()
 
 class dataFeedMskCrossAccount(Stack):
 
