@@ -78,9 +78,9 @@ openSearchAvailabilityZoneEnable = True             #Select True to enable deplo
 eventTickerIntervalMinutes = "1"                    #Interval in minutes for event ticker
 
 ###   userInput   ###
-enableSaslScramClientAuth = False     #In the first iteration, disable SASL/SCRAM client authentication, and in the second iteration, enable it.
-enableClusterConfig = False             #In the first iteration, disable cluster configuration, and in the second iteration, enable it
-enableClusterPolicy = False             #In the first iteration, disable cluster policy, and in the second iteration, enable it
+enableSaslScramClientAuth = True     #In the first iteration, disable SASL/SCRAM client authentication, and in the second iteration, enable it.
+enableClusterConfig = True             #In the first iteration, disable cluster configuration, and in the second iteration, enable it
+enableClusterPolicy = True             #In the first iteration, disable cluster policy, and in the second iteration, enable it
 
 ###     Cross Account Parameters    ###
 

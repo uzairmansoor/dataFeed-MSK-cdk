@@ -62,7 +62,7 @@ Now, execute the following command in the **dataFeedMsk/** directory, where the 
 
 *aws iam create-role --role-name awsblog-dev-app-consumerEc2Role --assume-role-policy-document file://ec2ConsumerPolicy.json*
 
-3.	Set the environment variables for Producer AWS Account
+4.	Set the environment variables for Producer AWS Account
 
 Now, configure the AWS CLI credentials for your producer AWS account. 
 
@@ -70,15 +70,15 @@ Now, configure the AWS CLI credentials for your producer AWS account.
 
 *set CDK_DEFAULT_REGION=us-east-1*
 
-4.	Bootstrap the first AWS environment (**Producer AWS Account**)
+5.	Bootstrap the first AWS environment (**Producer AWS Account**)
 
 *cdk bootstrap aws://{your_aws_account_id}/{your_aws_region}* [**Run this command in CMD**]	
 
-5.	Once bootstrapped, the configuration of the "**CDK Toolkit**" stack will be displayed as follows within the Cloud Formation console.
+6.	Once bootstrapped, the configuration of the "**CDK Toolkit**" stack will be displayed as follows within the Cloud Formation console.
 
 ![cdk_tool_kit](https://github.com/uzairmansoor/dataFeed-MSK-cdk/assets/82077348/5d6d0b40-7c29-4f0d-8af3-1b9fb896f8f3)
 
-3.	This step involves creating a VPC and deploying the Amazon MSK cluster within it. Additionally, it sets up an Apache Flink application, establishes an OpenSearch domain, and launches a new EC2 instance to handle the retrieval of raw exchange data.
+7.	This step involves creating a VPC and deploying the Amazon MSK cluster within it. Additionally, it sets up an Apache Flink application, establishes an OpenSearch domain, and launches a new EC2 instance to handle the retrieval of raw exchange data.
 
 •	Make sure that the *enableSaslScramClientAuth*, *enableClusterConfig*, and *enableClusterPolicy* parameters in the *parameters.py* file are set to False.
 
@@ -94,7 +94,7 @@ Make sure you are in the directory where the app1.py file is located.: **dataFee
 
 **NOTE**: This step can take up to 45-60 minutes.
 
-4. This deployment creates an S3 bucket to store the solution artifacts, which include the Flink application JAR file, Python scripts, and user data for both the producer and consumer.
+8. This deployment creates an S3 bucket to store the solution artifacts, which include the Flink application JAR file, Python scripts, and user data for both the producer and consumer.
 
 ![bucket1](https://github.com/uzairmansoor/dataFeed-MSK-cdk/assets/82077348/81459024-5557-4f50-a8e6-8ad0f626715c)
 
@@ -102,7 +102,7 @@ Make sure you are in the directory where the app1.py file is located.: **dataFee
 
 ![bucket3](https://github.com/uzairmansoor/dataFeed-MSK-cdk/assets/82077348/de60279e-b60c-4f0a-9ae3-d4b1e04138ec)
 
-5.	Now, set the *enableSaslScramClientAuth*, *enableClusterConfig*, and *enableClusterPolicy* parameters in the *parameters.py* file to True. 
+9.	Now, set the *enableSaslScramClientAuth*, *enableClusterConfig*, and *enableClusterPolicy* parameters in the *parameters.py* file to True. 
  
 This step will enable the SASL/SCRAM client authentication, Cluster configuration and PrivateLink.
 
