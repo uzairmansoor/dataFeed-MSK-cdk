@@ -58,7 +58,7 @@ First, configure the AWS CLI credentials for your consumer AWS account
 
 *set CDK_DEFAULT_REGION=us-east-1*
 
-Now, execute the following command in the **dataFeedMsk/** directory, where the *ec2ConsumerPolicy.json* file is located.
+Now, execute the following command in the **dataFeedMsk/** directory, where the *ec2ConsumerPolicy.json* file is located. If you change the EC2 Consumer Role name, ensure you update the “ec2ConsumerRoleName” parameter in the *parameters.py* file.
 
 *aws iam create-role --role-name awsblog-dev-app-consumerEc2Role --assume-role-policy-document file://ec2ConsumerPolicy.json*
 
@@ -125,6 +125,10 @@ Before deploying the cross-account stack, we need to modify some parameters in t
 ![msk_cluster_2](https://github.com/uzairmansoor/dataFeed-MSK-cdk/assets/82077348/5581dcfe-2039-45ab-9fbf-6b8a2c2317ea)
 
 •	If you haven't changed the name of the MSK cluster, there's no need to update the “**mskClusterName**” parameter. If you have, update it with your own MSK Cluster name.
+
+•	Navigate to "Secrets Manager" in AWS Cosole and select "AmazonMSK_/-awsblog-dev-app-mskConsumerSecret." Copy the "Secret ARN" and update the "mskConsumerSecretArn" parameter in the *parameters.py* file.
+
+•	Navigate to "Key Management Service" in the AWS Console, then go to "Customer Managed Keys" and select "awsblog-dev-app-sasl/scram-key." Copy the "ARN" and update the "customerManagedKeyArn" parameter in the parameters.py file.
 
 •	Now navigate to Systems Manager (SSM) Parameter Store.
 

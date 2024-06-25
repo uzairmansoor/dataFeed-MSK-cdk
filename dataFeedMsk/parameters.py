@@ -85,10 +85,10 @@ enableClusterPolicy = True             #In the first iteration, disable cluster 
 ###     Cross Account Parameters    ###
 
 consumerEc2KeyPairName = "awsBlog-dev-app-us-east-1"                    #Consumer EC2 Key pair name
+ec2ConsumerRoleName = f'{project}-{env}-{app}-consumerEc2Role'                                              #EC2 Consumer IAM role name
 mskClusterArn = "arn:aws:kafka:us-east-1:546268160168:cluster/awsblog-dev-app-mskCluster/d0e3f2cf-6e6a-4ad0-b1f2-864a9c8cb62d-21"   #ARN of the MSK cluster
 mskClusterName = f'{project}-{env}-{app}-mskCluster'                    #Name of the MSK cluster
-crossAccountAz1 = "us-east-1c"                                          #Availability Zone 1 for cross-account deployment
-crossAccountAz2 = "us-east-1d"                                          #Availability Zone 2 for cross-account deployment
 mskConsumerSecretArn = "arn:aws:secretsmanager:us-east-1:095773313313:secret:AmazonMSK_/-awsblog-dev-app-mskConsumerSecret-VMlO1r"  #ARN of MSK Consumer Secret
 customerManagedKeyArn = "arn:aws:kms:us-east-1:095773313313:key/9731155f-a757-4244-a369-4e9594163a8f"       #ARN of MSK Customer Managed KMS key
-ec2ConsumerRoleName = f'{project}-{env}-{app}-consumerEc2Role'                                              #EC2 Consumer IAM role name
+crossAccountAz1 = "us-east-1c"                                          #Availability Zone 1 for cross-account deployment
+crossAccountAz2 = "us-east-1d"                                          #Availability Zone 2 for cross-account deployment
