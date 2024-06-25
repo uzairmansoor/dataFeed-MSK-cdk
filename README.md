@@ -62,6 +62,8 @@ Now, execute the following command in the **dataFeedMsk/** directory, where the 
 
 *aws iam create-role --role-name awsblog-dev-app-consumerEc2Role --assume-role-policy-document file://ec2ConsumerPolicy.json*
 
+![iamRole](https://github.com/uzairmansoor/dataFeed-MSK-cdk/assets/82077348/6d781a20-cb59-4227-932c-d4979b5e747e)
+
 4.	Set the environment variables for Producer AWS Account
 
 Now, configure the AWS CLI credentials for your producer AWS account. 
