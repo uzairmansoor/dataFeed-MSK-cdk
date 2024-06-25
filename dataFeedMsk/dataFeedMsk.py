@@ -8,7 +8,6 @@ from aws_cdk import (
     aws_s3 as s3,
     aws_msk as msk,
     aws_ssm as ssm,
-    aws_ram as ram,
     aws_secretsmanager as secretsmanager,
     aws_opensearchservice as opensearch,
     aws_kms as kms,

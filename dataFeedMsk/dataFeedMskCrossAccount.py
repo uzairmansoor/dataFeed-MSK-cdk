@@ -2,15 +2,15 @@ from constructs import Construct
 from aws_cdk import (
     Stack,
     CfnOutput,
+    Aws as AWS,
     RemovalPolicy,
+    aws_s3 as s3,
+    Tags as tags,
     aws_ec2 as ec2,
     aws_iam as iam,
     aws_iam as iam,
     aws_msk as msk,
-    aws_s3 as s3,
-    Tags as tags,
-    aws_s3_deployment as s3deployment,
-    Aws as AWS
+    aws_s3_deployment as s3deployment
 )
 from dotenv import load_dotenv
 import os
@@ -244,7 +244,7 @@ class dataFeedMskCrossAccount(Stack):
         tags.of(kafkaConsumerEC2Instance).add("env", parameters.env)
         tags.of(kafkaConsumerEC2Instance).add("app", parameters.app)
 
-# #############       MSK Cluster VPC Connection      #############
+#############       MSK Cluster VPC Connection      #############
 
         mskClusterVpcConnection = msk.CfnVpcConnection(self, "mskClusterVpcConnection",
             authentication="SASL_SCRAM",
