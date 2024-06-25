@@ -52,19 +52,19 @@ We need to create an IAM Role for an EC2 instance in the Consumer account. This 
 
 3.	Set the environment variables for Consumer AWS Account
 
-First, setup the AWS CLI credentials of your consumer AWS Account 
+First, configure the AWS CLI credentials for your consumer AWS account 
 
 *set CDK_DEFAULT_ACCOUNT={your_aws_account_id}*
 
 *set CDK_DEFAULT_REGION=us-east-1*
 
-Now, execute the following command in the **dataFeedMsk** directory, where the *ec2ConsumerPolicy.json* file is located.
+Now, execute the following command in the **dataFeedMsk/** directory, where the *ec2ConsumerPolicy.json* file is located.
 
 *aws iam create-role --role-name awsblog-dev-app-consumerEc2Role --assume-role-policy-document file://ec2ConsumerPolicy.json*
 
 3.	Set the environment variables for Producer AWS Account
 
-Now, setup the AWS CLI credentials of your producer AWS Account 
+Now, configure the AWS CLI credentials for your producer AWS account. 
 
 *set CDK_DEFAULT_ACCOUNT={your_aws_account_id}*
 
@@ -84,7 +84,7 @@ Now, setup the AWS CLI credentials of your producer AWS Account
 
 •	Update the mskCrossAccountId parameter in the *parameters.py* file with your AWS cross-account ID.
 
-Make sure you are in the directory where the app1.py file is located.: *dataFeedMsk\*
+Make sure you are in the directory where the app1.py file is located.: **dataFeedMsk/**
 
 *cdk deploy --all --app "python app1.py" --profile {your_profile_name}*
 
@@ -106,7 +106,7 @@ Make sure you are in the directory where the app1.py file is located.: *dataFeed
  
 This step will enable the SASL/SCRAM client authentication, Cluster configuration and PrivateLink.
 
-Make sure you are in the directory where the app1.py file is located.: *dataFeedMsk\*
+Make sure you are in the directory where the app1.py file is located.: **dataFeedMsk/**
 
 *cdk deploy --all --app "python app1.py" --profile {your_profile_name}*
 
@@ -172,7 +172,7 @@ Once bootstrapped, the configuration of the "CDK Toolkit" stack will be displaye
 
 3.	In the final iteration, we will deploy the cross-account resources, which include the VPC, Security Groups, IAM Roles, and MSK Cluster VPC Connection.
 
-Make sure you are in the directory where the app2.py file is located.: *dataFeedMsk\*
+Make sure you are in the directory where the app2.py file is located.: **dataFeedMsk/**
 
 *cdk deploy --all --app "python app2.py" --profile {your_profile_name}*
 
